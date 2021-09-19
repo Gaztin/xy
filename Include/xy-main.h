@@ -17,14 +17,15 @@
 
 #pragma once
 
+#include <span>
+
 //////////////////////////////////////////////////////////////////////////
 // Data structures
 
 struct xyContext
 {
-	void*  pPlatformHandle     = nullptr;
-	int    CommandLineArgCount = 0;
-	char** ppCommandLineArgs   = nullptr;
+	std::span< char* > CommandLineArgs = { };
+	void*              pPlatformHandle = nullptr;
 
 }; // xyContext
 
@@ -49,9 +50,8 @@ extern int xyMain( const xyContext& rContext );
 INT WINAPI WinMain( _In_ HINSTANCE Instance, _In_opt_ HINSTANCE /*PrevInstance*/, _In_ LPSTR /*CmdLine*/, _In_ int /*ShowCmd*/ )
 {
 	xyContext Context;
-	Context.pPlatformHandle     = Instance;
-	Context.ppCommandLineArgs   = __argv;
-	Context.CommandLineArgCount = __argc;
+	Context.CommandLineArgs = std::span< char* >( __argv, __argc );
+	Context.pPlatformHandle = Instance;
 
 	return xyMain( Context );
 
@@ -62,8 +62,7 @@ INT WINAPI WinMain( _In_ HINSTANCE Instance, _In_opt_ HINSTANCE /*PrevInstance*/
 int main( int ArgC, char** ppArgV )
 {
 	xyContext Context;
-	Context.ppCommandLineArgs   = ppArgV;
-	Context.CommandLineArgCount = ArgC;
+	Context.CommandLineArgs = std::span< char* >( ppArgV, ArgC );
 
 	return xyMain( Context );
 
