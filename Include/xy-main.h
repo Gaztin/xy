@@ -22,7 +22,9 @@
 
 struct xyContext
 {
-	void* pPlatformHandle = nullptr;
+	void*  pPlatformHandle     = nullptr;
+	int    CommandLineArgCount = 0;
+	char** ppCommandLineArgs   = nullptr;
 
 }; // xyContext
 
@@ -47,10 +49,24 @@ extern int xyMain( const xyContext& rContext );
 INT WINAPI WinMain( _In_ HINSTANCE Instance, _In_opt_ HINSTANCE /*PrevInstance*/, _In_ LPSTR /*CmdLine*/, _In_ int /*ShowCmd*/ )
 {
 	xyContext Context;
-	Context.pPlatformHandle = Instance;
+	Context.pPlatformHandle     = Instance;
+	Context.ppCommandLineArgs   = __argv;
+	Context.CommandLineArgCount = __argc;
 
 	return xyMain( Context );
 
 } // WinMain
 
-#endif // _WIN32
+#else // _WIN32
+
+int main( int ArgC, char** ppArgV )
+{
+	xyContext Context;
+	Context.ppCommandLineArgs   = ppArgV;
+	Context.CommandLineArgCount = ArgC;
+
+	return xyMain( Context );
+
+} // main
+
+#endif // !_WIN32
