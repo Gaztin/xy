@@ -20,7 +20,7 @@
 #include <span>
 
 //////////////////////////////////////////////////////////////////////////
-// Data structures
+/// Data structures
 
 struct xyContext
 {
@@ -31,7 +31,7 @@ struct xyContext
 
 
 //////////////////////////////////////////////////////////////////////////
-// Global functions
+/// Global functions
 
 /*
  * Main entry function
@@ -41,7 +41,7 @@ extern int xyMain( const xyContext& rContext );
 
 
 //////////////////////////////////////////////////////////////////////////
-// Platform-specific implementations
+/// Platform-specific implementations
 
 #if defined( _WIN32 )
 
