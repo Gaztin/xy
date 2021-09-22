@@ -57,7 +57,20 @@ INT WINAPI WinMain( _In_ HINSTANCE Instance, _In_opt_ HINSTANCE /*PrevInstance*/
 
 } // WinMain
 
-#else // _WIN32
+#elif defined( __ANDROID__ ) // _WIN32
+
+#include <android/native_activity.h>
+
+[[maybe_unused]] JNIEXPORT void ANativeActivity_onCreate( ANativeActivity* pActivity, void* /*pSavedState*/, size_t /*SavedStateSize*/ )
+{
+	xyContext Context;
+	Context.pPlatformHandle = pActivity;
+
+	xyMain( Context );
+
+} // ANativeActivity_onCreate
+
+#else // __ANDROID__
 
 int main( int ArgC, char** ppArgV )
 {
