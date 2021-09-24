@@ -100,8 +100,9 @@ extern bool xyMessageBox( std::string_view Title, std::string_view Message );
 
 struct xyMonitor
 {
-	xyRect FullRect = { };
-	xyRect WorkRect = { };
+	std::string Name;
+	xyRect      FullRect;
+	xyRect      WorkRect;
 
 }; // xyMonitor
 
@@ -200,12 +201,13 @@ xyMonitor xyGetPrimaryDesktopMonitor( void )
 
 #if defined( XY_OS_WINDOWS )
 
-	HMONITOR    MonitorHandle = MonitorFromWindow( HWND_DESKTOP, MONITOR_DEFAULTTOPRIMARY );
-	MONITORINFO Info          = { .cbSize=sizeof( MONITORINFO ) };
+	HMONITOR       MonitorHandle = MonitorFromWindow( NULL, MONITOR_DEFAULTTOPRIMARY );
+	MONITORINFOEXA Info          = { sizeof( MONITORINFOEXA ) };
 	if( GetMonitorInfoA( MonitorHandle, &Info ) )
 	{
-		Monitor = { .FullRect { .Left=Info.rcMonitor.left, .Top=Info.rcMonitor.top, .Right=Info.rcMonitor.right, .Bottom=Info.rcMonitor.bottom },
-		            .WorkRect { .Left=Info.rcWork   .left, .Top=Info.rcWork   .top, .Right=Info.rcWork   .right, .Bottom=Info.rcWork   .bottom } };
+		return { .Name=Info.szDevice,
+		         .FullRect { .Left=Info.rcMonitor.left, .Top=Info.rcMonitor.top, .Right=Info.rcMonitor.right, .Bottom=Info.rcMonitor.bottom },
+		         .WorkRect { .Left=Info.rcWork   .left, .Top=Info.rcWork   .top, .Right=Info.rcWork   .right, .Bottom=Info.rcWork   .bottom } };
 	}
 
 #endif // XY_OS_WINDOWS
@@ -226,10 +228,11 @@ std::vector< xyMonitor > xyGetAllDesktopMonitors( void )
 	{
 		auto& rMonitors = *reinterpret_cast< std::vector< xyMonitor >* >( UserData );
 
-		MONITORINFO Info = { .cbSize=sizeof( MONITORINFO ) };
+		MONITORINFOEXA Info = { sizeof( MONITORINFOEXA ) };
 		if( GetMonitorInfoA( MonitorHandle, &Info ) )
 		{
-			xyMonitor Monitor = { .FullRect { .Left=Info.rcMonitor.left, .Top=Info.rcMonitor.top, .Right=Info.rcMonitor.right, .Bottom=Info.rcMonitor.bottom },
+			xyMonitor Monitor = { .Name=Info.szDevice,
+			                      .FullRect { .Left=Info.rcMonitor.left, .Top=Info.rcMonitor.top, .Right=Info.rcMonitor.right, .Bottom=Info.rcMonitor.bottom },
 			                      .WorkRect { .Left=Info.rcWork   .left, .Top=Info.rcWork   .top, .Right=Info.rcWork   .right, .Bottom=Info.rcWork   .bottom } };
 
 			rMonitors.emplace_back( std::move( Monitor ) );
