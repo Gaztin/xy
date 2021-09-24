@@ -17,6 +17,9 @@
 
 #pragma once
 
+//////////////////////////////////////////////////////////////////////////
+/// Includes
+
 #include "xy.h"
 
 #include <span>
@@ -60,7 +63,6 @@ INT WINAPI WinMain( _In_ HINSTANCE Instance, _In_opt_ HINSTANCE /*PrevInstance*/
 
 } // WinMain
 
-
 #elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
 
 #include <android/native_activity.h>
@@ -74,7 +76,6 @@ INT WINAPI WinMain( _In_ HINSTANCE Instance, _In_opt_ HINSTANCE /*PrevInstance*/
 
 } // ANativeActivity_onCreate
 
-
 #else // XY_OS_ANDROID
 
 int main( int ArgC, char** ppArgV )
@@ -85,6 +86,5 @@ int main( int ArgC, char** ppArgV )
 	return xyMain( Context );
 
 } // main
-
 
 #endif // !XY_OS_WINDOWS && !XY_OS_ANDROID

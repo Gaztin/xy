@@ -17,7 +17,11 @@
 
 #pragma once
 
+//////////////////////////////////////////////////////////////////////////
+/// Includes
+
 #include <string_view>
+#include <vector>
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -64,7 +68,20 @@
 
 
 //////////////////////////////////////////////////////////////////////////
-/// Global functions
+/// Data structures
+
+struct xyRect
+{
+	int32_t Left   = 0;
+	int32_t Top    = 0;
+	int32_t Right  = 0;
+	int32_t Bottom = 0;
+
+}; // xyRect
+
+
+//////////////////////////////////////////////////////////////////////////
+/// Functions
 
 /*
 * Prompts a system message box containing a user-defined message and two buttons: 'Yes' and 'No'.
@@ -76,29 +93,133 @@
 extern bool xyMessageBox( std::string_view Title, std::string_view Message );
 
 
+#if defined( XY_ENV_DESKTOP )
+
+//////////////////////////////////////////////////////////////////////////
+/// Desktop-specific data structures
+
+struct xyMonitor
+{
+	xyRect FullRect = { };
+	xyRect WorkRect = { };
+
+}; // xyMonitor
+
+struct xyMouse
+{
+	operator bool( void ) const { return Active; } // Allows `if(auto m = xyGetMouse()) {...}`
+
+	int32_t X      = 0;
+	int32_t Y      = 0;
+	bool    Active = false; // The mouse may be inactive if the user has a controller or pen plugged in, or if there was an error obtaining the cursor data.
+
+}; // xyMouse
+
+
+//////////////////////////////////////////////////////////////////////////
+/// Desktop-specific functions
+
+/*
+ * Obtain the mouse pointer in desktop coordinates.
+ *
+ * @return The mouse data.
+ */
+extern xyMouse xyGetMouse( void );
+
+/*
+ * Gather a list of all desktop monitors for this device.
+ *
+ * @return A vector of monitor data.
+ */
+extern std::vector< xyMonitor > xyGetDesktopMonitors( void );
+
+
+#endif // XY_ENV_DESKTOP
+
+
 #if defined( XY_IMPLEMENT )
 
 //////////////////////////////////////////////////////////////////////////
 /// Includes
 
 #if defined( XY_OS_WINDOWS )
-#include <Windows.h>
+#include <windows.h>
 #endif // XY_OS_WINDOWS
 
 
 //////////////////////////////////////////////////////////////////////////
-/// Global functions
+/// Functions
 
 bool xyMessageBox( std::string_view Title, std::string_view Message )
 {
 
 #if defined( XY_OS_WINDOWS )
-	return MessageBoxA( NULL, Message.data(), Title.data(), MB_YESNO | MB_ICONINFORMATION | MB_TASKMODAL ) == IDYES;
+	return ( MessageBoxA( NULL, Message.data(), Title.data(), MB_YESNO | MB_ICONINFORMATION | MB_TASKMODAL ) == IDYES );
 #endif // XY_OS_WINDOWS
 
 	return false;
 
 } // xyMessageBox
+
+
+#if defined( XY_ENV_DESKTOP )
+
+//////////////////////////////////////////////////////////////////////////
+/// Desktop-specific functions
+
+xyMouse xyGetMouse( void )
+{
+	xyMouse Mouse;
+
+#if defined( XY_OS_WINDOWS )
+
+	CURSORINFO Info { .cbSize=sizeof( CURSORINFO ) };
+	if( GetCursorInfo( &Info ) )
+	{
+		Mouse = { .X=Info.ptScreenPos.x, .Y=Info.ptScreenPos.y, .Active=Info.flags==CURSOR_SHOWING };
+	}
+
+#endif // XY_OS_WINDOWS
+
+	return Mouse;
+
+} // xyGetMouse
+
+std::vector< xyMonitor > xyGetDesktopMonitors( void )
+{
+	std::vector< xyMonitor > Monitors;
+
+#if defined( XY_OS_WINDOWS )
+
+	auto EnumProc = []( HMONITOR MonitorHandle, HDC /*DeviceContextHandle*/, LPRECT /*pRect*/, LPARAM UserData ) -> BOOL
+	{
+		auto& rMonitors = *reinterpret_cast< std::vector< xyMonitor >* >( UserData );
+
+		MONITORINFO Info { .cbSize=sizeof( MONITORINFO ) };
+		if( GetMonitorInfoA( MonitorHandle, &Info ) )
+		{
+			xyMonitor Monitor
+			{
+				.FullRect { .Left=Info.rcMonitor.left, .Top=Info.rcMonitor.top, .Right=Info.rcMonitor.right, .Bottom=Info.rcMonitor.bottom },
+				.WorkRect { .Left=Info.rcWork   .left, .Top=Info.rcWork   .top, .Right=Info.rcWork   .right, .Bottom=Info.rcWork   .bottom },
+			};
+
+			rMonitors.emplace_back( std::move( Monitor ) );
+		}
+
+		// Always continue
+		return TRUE;
+	};
+
+	EnumDisplayMonitors( NULL, NULL, EnumProc, reinterpret_cast< LPARAM >( &Monitors ) );
+
+#endif // XY_OS_WINDOWS
+
+	return Monitors;
+
+} // xyGetDesktopMonitors
+
+#endif // XY_ENV_DESKTOP
 
 
 #endif // XY_IMPLEMENT
