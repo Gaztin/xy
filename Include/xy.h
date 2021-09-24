@@ -18,6 +18,46 @@
 #pragma once
 
 //////////////////////////////////////////////////////////////////////////
+/// Pre-processor defines
+
+#if defined( _WIN32 )
+/// Windows
+
+#define XY_OS_WINDOWS
+
+
+#elif defined( __linux__ ) // _WIN32
+/// Linux
+
+#define XY_OS_LINUX
+
+
+#elif defined( __APPLE__ ) // __linux__
+/// Apple
+
+#include <TargetConditionals.h>
+
+#if defined( TARGET_OS_OSX )
+	#define XY_OS_MACOS
+#elif defined( TARGET_OS_IOS ) // TARGET_OS_OSX
+	#define XY_OS_IOS
+#elif defined( TARGET_OS_WATCH ) // TARGET_OS_IOS
+	#define XY_OS_WATCHOS
+#elif defined( TARGET_OS_TV ) // TARGET_OS_WATCH
+	#define XY_OS_TVOS
+#endif // TARGET_OS_TV
+
+
+#elif defined( __ANDROID__ ) // __APPLE__
+/// Android
+
+#define XY_OS_ANDROID
+
+
+#endif // __ANDROID__
+
+//////////////////////////////////////////////////////////////////////////
+/// Implementations
 
 #if defined( XY_IMPLEMENT )
 

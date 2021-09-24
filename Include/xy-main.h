@@ -17,7 +17,10 @@
 
 #pragma once
 
+#include "xy.h"
+
 #include <span>
+
 
 //////////////////////////////////////////////////////////////////////////
 /// Data structures
@@ -43,7 +46,7 @@ extern int xyMain( const xyContext& rContext );
 //////////////////////////////////////////////////////////////////////////
 /// Platform-specific implementations
 
-#if defined( _WIN32 )
+#if defined( XY_OS_WINDOWS )
 
 #include <windows.h>
 
@@ -57,7 +60,8 @@ INT WINAPI WinMain( _In_ HINSTANCE Instance, _In_opt_ HINSTANCE /*PrevInstance*/
 
 } // WinMain
 
-#elif defined( __ANDROID__ ) // _WIN32
+
+#elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
 
 #include <android/native_activity.h>
 
@@ -70,7 +74,8 @@ INT WINAPI WinMain( _In_ HINSTANCE Instance, _In_opt_ HINSTANCE /*PrevInstance*/
 
 } // ANativeActivity_onCreate
 
-#else // __ANDROID__
+
+#else // XY_OS_ANDROID
 
 int main( int ArgC, char** ppArgV )
 {
@@ -81,4 +86,5 @@ int main( int ArgC, char** ppArgV )
 
 } // main
 
-#endif // !_WIN32
+
+#endif // !XY_OS_WINDOWS && !XY_OS_ANDROID
