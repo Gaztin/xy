@@ -68,6 +68,17 @@
 
 
 //////////////////////////////////////////////////////////////////////////
+/// Enumerators
+
+enum class xyTheme
+{
+	Light,
+	Dark,
+
+}; // xyTheme
+
+
+//////////////////////////////////////////////////////////////////////////
 /// Data structures
 
 struct xyRect
@@ -107,6 +118,13 @@ extern bool xyMessageBox( std::string_view Title, std::string_view Message );
  * @return The display data.
  */
 extern xyDisplay xyGetDisplay( void );
+
+/*
+ * Obtains the preferred theme of this device.
+ *
+ * @return The theme.
+ */
+extern xyTheme xyGetPreferredTheme( void );
 
 
 #if defined( XY_ENV_DESKTOP )
@@ -201,6 +219,25 @@ xyDisplay xyGetDisplay( void )
 	return Display;
 
 } // xyGetDisplay
+
+//////////////////////////////////////////////////////////////////////////
+
+xyTheme xyGetPreferredTheme( void )
+{
+
+#if defined( XY_OS_WINDOWS )
+
+	// Courtesy of https://stackoverflow.com/a/51336913
+	DWORD AppsUseLightTheme;
+	DWORD DataSize = sizeof( AppsUseLightTheme );
+	if( RegGetValueA( HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize", "AppsUseLightTheme", RRF_RT_REG_DWORD, NULL, &AppsUseLightTheme, &DataSize ) == ERROR_SUCCESS )
+		return AppsUseLightTheme ? xyTheme::Light : xyTheme::Dark;
+
+	return xyTheme::Light;
+
+#endif // XY_OS_WINDOWS
+
+} // xyGetPreferredTheme
 
 
 #if defined( XY_ENV_DESKTOP )
