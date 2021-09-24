@@ -120,18 +120,25 @@ struct xyMouse
 /// Desktop-specific functions
 
 /*
- * Obtain the mouse pointer in desktop coordinates.
+ * Obtain the desktop mouse pointer.
  *
  * @return The mouse data.
  */
 extern xyMouse xyGetMouse( void );
 
 /*
- * Gather a list of all desktop monitors for this device.
+ * Obtain the primary monitor for this desktop device.
+ *
+ * @return The monitor data.
+ */
+extern xyMonitor xyGetPrimaryDesktopMonitor( void );
+
+/*
+ * Gather a list of all desktop monitors for this desktop device.
  *
  * @return A vector of monitor data.
  */
-extern std::vector< xyMonitor > xyGetDesktopMonitors( void );
+extern std::vector< xyMonitor > xyGetAllDesktopMonitors( void );
 
 
 #endif // XY_ENV_DESKTOP
@@ -185,7 +192,31 @@ xyMouse xyGetMouse( void )
 
 } // xyGetMouse
 
-std::vector< xyMonitor > xyGetDesktopMonitors( void )
+//////////////////////////////////////////////////////////////////////////
+
+xyMonitor xyGetPrimaryDesktopMonitor( void )
+{
+	xyMonitor Monitor;
+
+#if defined( XY_OS_WINDOWS )
+
+	HMONITOR    MonitorHandle = MonitorFromWindow( HWND_DESKTOP, MONITOR_DEFAULTTOPRIMARY );
+	MONITORINFO Info          = { .cbSize=sizeof( MONITORINFO ) };
+	if( GetMonitorInfoA( MonitorHandle, &Info ) )
+	{
+		Monitor = { .FullRect { .Left=Info.rcMonitor.left, .Top=Info.rcMonitor.top, .Right=Info.rcMonitor.right, .Bottom=Info.rcMonitor.bottom },
+		            .WorkRect { .Left=Info.rcWork   .left, .Top=Info.rcWork   .top, .Right=Info.rcWork   .right, .Bottom=Info.rcWork   .bottom } };
+	}
+
+#endif // XY_OS_WINDOWS
+
+	return Monitor;
+
+} // xyGetPrimaryDesktopMonitor
+
+//////////////////////////////////////////////////////////////////////////
+
+std::vector< xyMonitor > xyGetAllDesktopMonitors( void )
 {
 	std::vector< xyMonitor > Monitors;
 
@@ -195,14 +226,11 @@ std::vector< xyMonitor > xyGetDesktopMonitors( void )
 	{
 		auto& rMonitors = *reinterpret_cast< std::vector< xyMonitor >* >( UserData );
 
-		MONITORINFO Info { .cbSize=sizeof( MONITORINFO ) };
+		MONITORINFO Info = { .cbSize=sizeof( MONITORINFO ) };
 		if( GetMonitorInfoA( MonitorHandle, &Info ) )
 		{
-			xyMonitor Monitor
-			{
-				.FullRect { .Left=Info.rcMonitor.left, .Top=Info.rcMonitor.top, .Right=Info.rcMonitor.right, .Bottom=Info.rcMonitor.bottom },
-				.WorkRect { .Left=Info.rcWork   .left, .Top=Info.rcWork   .top, .Right=Info.rcWork   .right, .Bottom=Info.rcWork   .bottom },
-			};
+			xyMonitor Monitor = { .FullRect { .Left=Info.rcMonitor.left, .Top=Info.rcMonitor.top, .Right=Info.rcMonitor.right, .Bottom=Info.rcMonitor.bottom },
+			                      .WorkRect { .Left=Info.rcWork   .left, .Top=Info.rcWork   .top, .Right=Info.rcWork   .right, .Bottom=Info.rcWork   .bottom } };
 
 			rMonitors.emplace_back( std::move( Monitor ) );
 		}
@@ -217,7 +245,7 @@ std::vector< xyMonitor > xyGetDesktopMonitors( void )
 
 	return Monitors;
 
-} // xyGetDesktopMonitors
+} // xyGetAllDesktopMonitors
 
 #endif // XY_ENV_DESKTOP
 
