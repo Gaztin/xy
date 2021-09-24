@@ -177,19 +177,18 @@ bool xyMessageBox( std::string_view Title, std::string_view Message )
 
 xyMouse xyGetMouse( void )
 {
-	xyMouse Mouse;
 
 #if defined( XY_OS_WINDOWS )
 
-	CURSORINFO Info { .cbSize=sizeof( CURSORINFO ) };
+	CURSORINFO Info = { .cbSize=sizeof( CURSORINFO ) };
 	if( GetCursorInfo( &Info ) )
 	{
-		Mouse = { .X=Info.ptScreenPos.x, .Y=Info.ptScreenPos.y, .Active=Info.flags==CURSOR_SHOWING };
+		return { .X=Info.ptScreenPos.x, .Y=Info.ptScreenPos.y, .Active=Info.flags==CURSOR_SHOWING };
 	}
 
 #endif // XY_OS_WINDOWS
 
-	return Mouse;
+	return { .Active=false };
 
 } // xyGetMouse
 
@@ -197,7 +196,6 @@ xyMouse xyGetMouse( void )
 
 xyMonitor xyGetPrimaryDesktopMonitor( void )
 {
-	xyMonitor Monitor;
 
 #if defined( XY_OS_WINDOWS )
 
@@ -212,7 +210,7 @@ xyMonitor xyGetPrimaryDesktopMonitor( void )
 
 #endif // XY_OS_WINDOWS
 
-	return Monitor;
+	return { };
 
 } // xyGetPrimaryDesktopMonitor
 
