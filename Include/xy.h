@@ -90,12 +90,24 @@ struct xyRect
 
 }; // xyRect
 
+struct xyDevice
+{
+	std::string Name;
+
+}; // xyDevice
+
 struct xyDisplay
 {
 	uint32_t Width  = 0;
 	uint32_t Height = 0;
 
 }; // xyDisplay
+
+struct xyUser
+{
+	std::string Name;
+
+}; // xyUser
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -111,6 +123,13 @@ struct xyDisplay
 extern bool xyMessageBox( std::string_view Title, std::string_view Message );
 
 /*
+ * Obtains information about the current device.
+ *
+ * @return The device data.
+ */
+extern xyDevice xyGetDevice( void );
+
+/*
  * Obtains the display of this device.
  * In desktop environments, this is the virtual screen. The virtual screen is the collection of all monitors.
  * To obtain individual desktop monitors, refer to xyGetPrimaryDesktopMonitor or xyGetAllDesktopMonitors.
@@ -120,9 +139,16 @@ extern bool xyMessageBox( std::string_view Title, std::string_view Message );
 extern xyDisplay xyGetDisplay( void );
 
 /*
+ * Obtains information about the current user on this device.
+ *
+ * @return The user data.
+ */
+extern xyUser xyGetUser( void );
+
+/*
  * Obtains the preferred theme of this device.
  *
- * @return The theme.
+ * @return The theme enumerator.
  */
 extern xyTheme xyGetPreferredTheme( void );
 
@@ -186,6 +212,7 @@ extern std::vector< xyMonitor > xyGetAllDesktopMonitors( void );
 
 #if defined( XY_OS_WINDOWS )
 #include <windows.h>
+#include <lmcons.h>
 #endif // XY_OS_WINDOWS
 
 
@@ -205,6 +232,26 @@ bool xyMessageBox( std::string_view Title, std::string_view Message )
 
 //////////////////////////////////////////////////////////////////////////
 
+xyDevice xyGetDevice( void )
+{
+
+#if defined( XY_OS_WINDOWS )
+
+	CHAR  Buffer[ CNLEN + 1 ];
+	DWORD Size = static_cast< DWORD >( std::size( Buffer ) );
+	if( GetComputerNameA( Buffer, &Size ) )
+	{
+		return { .Name={ Buffer, Size } };
+	}
+
+	return { };
+
+#endif // XY_OS_WINDOWS
+
+} // xyGetDevice
+
+//////////////////////////////////////////////////////////////////////////
+
 xyDisplay xyGetDisplay( void )
 {
 	xyDisplay Display;
@@ -219,6 +266,26 @@ xyDisplay xyGetDisplay( void )
 	return Display;
 
 } // xyGetDisplay
+
+//////////////////////////////////////////////////////////////////////////
+
+xyUser xyGetUser( void )
+{
+
+#if defined( XY_OS_WINDOWS )
+
+	CHAR  Buffer[ UNLEN + 1 ];
+	DWORD Size = static_cast< DWORD >( std::size( Buffer ) );
+	if( GetUserNameA( Buffer, &Size ) )
+	{
+		return { .Name={ Buffer, Size } };
+	}
+
+	return { };
+
+#endif // XY_OS_WINDOWS
+
+} // xyGetUser
 
 //////////////////////////////////////////////////////////////////////////
 
