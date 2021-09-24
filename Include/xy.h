@@ -17,6 +17,9 @@
 
 #pragma once
 
+#include <string_view>
+
+
 //////////////////////////////////////////////////////////////////////////
 /// Pre-processor defines
 
@@ -56,9 +59,43 @@
 
 #endif // __ANDROID__
 
+
 //////////////////////////////////////////////////////////////////////////
-/// Implementations
+/// Global functions
+
+/*
+* Prompts a system message box containing a user-defined message and two buttons: 'Yes' and 'No'.
+*
+* @param Title The title of the message box window.
+* @param Message The content of the message text box.
+* @return True if 'Yes' was clicked, false otherwise.
+*/
+extern bool xyMessageBox( std::string_view Title, std::string_view Message );
+
 
 #if defined( XY_IMPLEMENT )
+
+//////////////////////////////////////////////////////////////////////////
+/// Includes
+
+#if defined( XY_OS_WINDOWS )
+#include <Windows.h>
+#endif // XY_OS_WINDOWS
+
+
+//////////////////////////////////////////////////////////////////////////
+/// Global functions
+
+bool xyMessageBox( std::string_view Title, std::string_view Message )
+{
+
+#if defined( XY_OS_WINDOWS )
+	return MessageBoxA( NULL, Message.data(), Title.data(), MB_YESNO | MB_ICONINFORMATION | MB_TASKMODAL ) == IDYES;
+#endif // XY_OS_WINDOWS
+
+	return false;
+
+} // xyMessageBox
+
 
 #endif // XY_IMPLEMENT
