@@ -27,13 +27,13 @@
 /// Windows
 
 #define XY_OS_WINDOWS
-
+#define XY_ENV_DESKTOP
 
 #elif defined( __linux__ ) // _WIN32
 /// Linux
 
 #define XY_OS_LINUX
-
+#define XY_ENV_DESKTOP
 
 #elif defined( __APPLE__ ) // __linux__
 /// Apple
@@ -42,20 +42,23 @@
 
 #if defined( TARGET_OS_OSX )
 	#define XY_OS_MACOS
+	#define XY_ENV_DESKTOP
 #elif defined( TARGET_OS_IOS ) // TARGET_OS_OSX
 	#define XY_OS_IOS
+	#define XY_ENV_PHONE
 #elif defined( TARGET_OS_WATCH ) // TARGET_OS_IOS
 	#define XY_OS_WATCHOS
+	#define XY_ENV_WATCH
 #elif defined( TARGET_OS_TV ) // TARGET_OS_WATCH
 	#define XY_OS_TVOS
+	#define XY_ENV_TV
 #endif // TARGET_OS_TV
-
 
 #elif defined( __ANDROID__ ) // __APPLE__
 /// Android
 
 #define XY_OS_ANDROID
-
+#define XY_ENV_PHONE
 
 #endif // __ANDROID__
 
