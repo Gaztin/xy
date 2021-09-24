@@ -79,6 +79,13 @@ struct xyRect
 
 }; // xyRect
 
+struct xyDisplay
+{
+	uint32_t Width  = 0;
+	uint32_t Height = 0;
+
+}; // xyDisplay
+
 
 //////////////////////////////////////////////////////////////////////////
 /// Functions
@@ -91,6 +98,15 @@ struct xyRect
 * @return True if 'Yes' was clicked, false otherwise.
 */
 extern bool xyMessageBox( std::string_view Title, std::string_view Message );
+
+/*
+ * Obtains the display of this device.
+ * In desktop environments, this is the virtual screen. The virtual screen is the collection of all monitors.
+ * To obtain individual desktop monitors, refer to xyGetPrimaryDesktopMonitor or xyGetAllDesktopMonitors.
+ *
+ * @return The display data.
+ */
+extern xyDisplay xyGetDisplay( void );
 
 
 #if defined( XY_ENV_DESKTOP )
@@ -168,6 +184,23 @@ bool xyMessageBox( std::string_view Title, std::string_view Message )
 	return false;
 
 } // xyMessageBox
+
+//////////////////////////////////////////////////////////////////////////
+
+xyDisplay xyGetDisplay( void )
+{
+	xyDisplay Display;
+
+#if defined( XY_OS_WINDOWS )
+
+	Display.Width  = static_cast< uint32_t >( GetSystemMetrics( SM_CXVIRTUALSCREEN ) );
+	Display.Height = static_cast< uint32_t >( GetSystemMetrics( SM_CYVIRTUALSCREEN ) );
+
+#endif // XY_OS_WINDOWS
+
+	return Display;
+
+} // xyGetDisplay
 
 
 #if defined( XY_ENV_DESKTOP )
