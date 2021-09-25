@@ -34,13 +34,7 @@
 #define XY_OS_WINDOWS
 #define XY_ENV_DESKTOP
 
-#elif defined( __linux__ ) // _WIN32
-/// Linux
-
-#define XY_OS_LINUX
-#define XY_ENV_DESKTOP
-
-#elif defined( __APPLE__ ) // __linux__
+#elif defined( __APPLE__ ) // _WIN32
 /// Apple
 
 #include <TargetConditionals.h>
@@ -65,7 +59,13 @@
 #define XY_OS_ANDROID
 #define XY_ENV_PHONE
 
-#endif // __ANDROID__
+#elif defined( __linux__ ) // __ANDROID__
+/// Linux
+
+#define XY_OS_LINUX
+#define XY_ENV_DESKTOP
+
+#endif // __linux__
 
 
 //////////////////////////////////////////////////////////////////////////
