@@ -279,16 +279,13 @@ xyDevice xyGetDevice( void )
 
 xyDisplay xyGetDisplay( void )
 {
-	xyDisplay Display;
 
 #if defined( XY_OS_WINDOWS )
 
-	Display.Width  = static_cast< uint32_t >( GetSystemMetrics( SM_CXVIRTUALSCREEN ) );
-	Display.Height = static_cast< uint32_t >( GetSystemMetrics( SM_CYVIRTUALSCREEN ) );
+	return { .Width  = static_cast< uint32_t >( GetSystemMetrics( SM_CXVIRTUALSCREEN ) )
+	         .Height = static_cast< uint32_t >( GetSystemMetrics( SM_CYVIRTUALSCREEN ) ) };
 
 #endif // XY_OS_WINDOWS
-
-	return Display;
 
 } // xyGetDisplay
 
@@ -327,7 +324,11 @@ xyTheme xyGetPreferredTheme( void )
 
 	return xyTheme::Light;
 
-#endif // XY_OS_WINDOWS
+#elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
+
+	return xyTheme::Light;
+
+#endif // XY_OS_ANDROID
 
 } // xyGetPreferredTheme
 
@@ -348,9 +349,9 @@ xyMouse xyGetMouse( void )
 		return { .X=Info.ptScreenPos.x, .Y=Info.ptScreenPos.y, .Active=Info.flags==CURSOR_SHOWING };
 	}
 
-#endif // XY_OS_WINDOWS
-
 	return { .Active=false };
+
+#endif // XY_OS_WINDOWS
 
 } // xyGetMouse
 
@@ -370,9 +371,9 @@ xyMonitor xyGetPrimaryDesktopMonitor( void )
 		         .WorkRect { .Left=Info.rcWork   .left, .Top=Info.rcWork   .top, .Right=Info.rcWork   .right, .Bottom=Info.rcWork   .bottom } };
 	}
 
-#endif // XY_OS_WINDOWS
-
 	return { };
+
+#endif // XY_OS_WINDOWS
 
 } // xyGetPrimaryDesktopMonitor
 
@@ -380,9 +381,10 @@ xyMonitor xyGetPrimaryDesktopMonitor( void )
 
 std::vector< xyMonitor > xyGetAllDesktopMonitors( void )
 {
-	std::vector< xyMonitor > Monitors;
 
 #if defined( XY_OS_WINDOWS )
+
+	std::vector< xyMonitor > Monitors;
 
 	auto EnumProc = []( HMONITOR MonitorHandle, HDC /*DeviceContextHandle*/, LPRECT /*pRect*/, LPARAM UserData ) -> BOOL
 	{
@@ -404,9 +406,9 @@ std::vector< xyMonitor > xyGetAllDesktopMonitors( void )
 
 	EnumDisplayMonitors( NULL, NULL, EnumProc, reinterpret_cast< LPARAM >( &Monitors ) );
 
-#endif // XY_OS_WINDOWS
-
 	return Monitors;
+
+#endif // XY_OS_WINDOWS
 
 } // xyGetAllDesktopMonitors
 
