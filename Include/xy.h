@@ -20,6 +20,7 @@
 //////////////////////////////////////////////////////////////////////////
 /// Includes
 
+#include <span>
 #include <string_view>
 #include <vector>
 
@@ -81,6 +82,13 @@ enum class xyTheme
 //////////////////////////////////////////////////////////////////////////
 /// Data structures
 
+struct xyContext
+{
+	std::span< char* > CommandLineArgs = { };
+	void*              pPlatformHandle = nullptr;
+
+}; // xyContext
+
 struct xyRect
 {
 	int32_t Left   = 0;
@@ -112,6 +120,13 @@ struct xyUser
 
 //////////////////////////////////////////////////////////////////////////
 /// Functions
+
+/*
+ * Obtains the internal xy context where all the global data is stored
+ *
+ * @return A reference to the context data.
+ */
+extern xyContext& xyGetContext( void );
 
 /*
 * Prompts a system message box containing a user-defined message and two buttons: 'Yes' and 'No'.
@@ -218,6 +233,16 @@ extern std::vector< xyMonitor > xyGetAllDesktopMonitors( void );
 
 //////////////////////////////////////////////////////////////////////////
 /// Functions
+
+xyContext& xyGetContext( void )
+{
+	static xyContext Context;
+
+	return Context;
+
+} // xyGetContext
+
+//////////////////////////////////////////////////////////////////////////
 
 bool xyMessageBox( std::string_view Title, std::string_view Message )
 {

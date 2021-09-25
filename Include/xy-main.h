@@ -22,19 +22,6 @@
 
 #include "xy.h"
 
-#include <span>
-
-
-//////////////////////////////////////////////////////////////////////////
-/// Data structures
-
-struct xyContext
-{
-	std::span< char* > CommandLineArgs = { };
-	void*              pPlatformHandle = nullptr;
-
-}; // xyContext
-
 
 //////////////////////////////////////////////////////////////////////////
 /// Global functions
@@ -43,7 +30,7 @@ struct xyContext
  * Main entry function
  * Define this in your application's main source file!
  */
-extern int xyMain( const xyContext& rContext );
+extern int xyMain( void );
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -55,11 +42,11 @@ extern int xyMain( const xyContext& rContext );
 
 INT WINAPI WinMain( _In_ HINSTANCE Instance, _In_opt_ HINSTANCE /*PrevInstance*/, _In_ LPSTR /*CmdLine*/, _In_ int /*ShowCmd*/ )
 {
-	xyContext Context;
-	Context.CommandLineArgs = std::span< char* >( __argv, __argc );
-	Context.pPlatformHandle = Instance;
+	xyContext& rContext = xyGetContext();
+	rContext.CommandLineArgs = std::span< char* >( __argv, __argc );
+	rContext.pPlatformHandle = Instance;
 
-	return xyMain( Context );
+	return xyMain();
 
 } // WinMain
 
@@ -69,10 +56,10 @@ INT WINAPI WinMain( _In_ HINSTANCE Instance, _In_opt_ HINSTANCE /*PrevInstance*/
 
 [[maybe_unused]] JNIEXPORT void ANativeActivity_onCreate( ANativeActivity* pActivity, void* /*pSavedState*/, size_t /*SavedStateSize*/ )
 {
-	xyContext Context;
-	Context.pPlatformHandle = pActivity;
+	xyContext& rContext = xyGetContext();
+	rContext.pPlatformHandle = pActivity;
 
-	xyMain( Context );
+	xyMain();
 
 } // ANativeActivity_onCreate
 
@@ -80,10 +67,10 @@ INT WINAPI WinMain( _In_ HINSTANCE Instance, _In_opt_ HINSTANCE /*PrevInstance*/
 
 int main( int ArgC, char** ppArgV )
 {
-	xyContext Context;
-	Context.CommandLineArgs = std::span< char* >( ppArgV, ArgC );
+	xyContext& rContext = xyGetContext();
+	rContext.CommandLineArgs = std::span< char* >( ppArgV, ArgC );
 
-	return xyMain( Context );
+	return xyMain();
 
 } // main
 
