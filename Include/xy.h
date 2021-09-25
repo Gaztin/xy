@@ -228,7 +228,9 @@ extern std::vector< xyMonitor > xyGetAllDesktopMonitors( void );
 #if defined( XY_OS_WINDOWS )
 #include <windows.h>
 #include <lmcons.h>
-#endif // XY_OS_WINDOWS
+#elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
+#include <android/native_activity.h>
+#endif // XY_OS_ANDROID
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -248,10 +250,44 @@ bool xyMessageBox( std::string_view Title, std::string_view Message )
 {
 
 #if defined( XY_OS_WINDOWS )
-	return ( MessageBoxA( NULL, Message.data(), Title.data(), MB_YESNO | MB_ICONINFORMATION | MB_TASKMODAL ) == IDYES );
-#endif // XY_OS_WINDOWS
 
+	return ( MessageBoxA( NULL, Message.data(), Title.data(), MB_YESNO | MB_ICONINFORMATION | MB_TASKMODAL ) == IDYES );
+
+#elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
+
+	xyContext&       rContext  = xyGetContext();
+	ANativeActivity& rActivity = *static_cast< ANativeActivity* >( rContext.pPlatformHandle );
+	JNIEnv*          pJNI      = rActivity.env;
+
+	// Easy way to tidy up all our local references when we're done
+	pJNI->PushLocalFrame( 16 );
+
+	// Obtain all necessary classes and method IDs
+	jclass    ClassBuilder            = pJNI->FindClass( "android/app/AlertDialog$Builder" );
+	jmethodID CtorBuilder             = pJNI->GetMethodID( ClassBuilder, "<init>", "(Landroid/content/Context;)V" );
+	jmethodID MethodSetTitle          = pJNI->GetMethodID( ClassBuilder, "setTitle", "(Ljava/lang/CharSequence;)Landroid/app/AlertDialog$Builder;" );
+	jmethodID MethodSetMessage        = pJNI->GetMethodID( ClassBuilder, "setMessage", "(Ljava/lang/CharSequence;)Landroid/app/AlertDialog$Builder;" );
+	jmethodID MethodSetPositiveButton = pJNI->GetMethodID( ClassBuilder, "setPositiveButton", "(Ljava/lang/CharSequence;Landroid/content/DialogInterface$OnClickListener;)Landroid/app/AlertDialog$Builder;" );
+	jmethodID MethodSetNegativeButton = pJNI->GetMethodID( ClassBuilder, "setNegativeButton", "(Ljava/lang/CharSequence;Landroid/content/DialogInterface$OnClickListener;)Landroid/app/AlertDialog$Builder;" );
+	jmethodID MethodSetCancelable     = pJNI->GetMethodID( ClassBuilder, "setCancelable", "(Z)Landroid/app/AlertDialog$Builder;" );
+	jmethodID MethodShow              = pJNI->GetMethodID( ClassBuilder, "show","()Landroid/app/AlertDialog;" );
+
+	// Create the alert dialog
+	jobject Builder = pJNI->NewObject( ClassBuilder, CtorBuilder, rActivity.clazz );
+	pJNI->CallObjectMethod( Builder, MethodSetTitle, pJNI->NewStringUTF( Title.data() ) );
+	pJNI->CallObjectMethod( Builder, MethodSetMessage, pJNI->NewStringUTF( Message.data() ) );
+	pJNI->CallObjectMethod( Builder, MethodSetPositiveButton, pJNI->NewStringUTF( "Yes" ), nullptr );
+	pJNI->CallObjectMethod( Builder, MethodSetNegativeButton, pJNI->NewStringUTF( "No" ), nullptr );
+	pJNI->CallObjectMethod( Builder, MethodSetCancelable, false );
+	pJNI->CallObjectMethod( Builder, MethodShow );
+
+	// Clean up local references
+	pJNI->PopLocalFrame( nullptr );
+
+	// We have no way of polling the selection because the dialog has not been presented to the user yet.
 	return false;
+
+#endif // XY_OS_ANDROID
 
 } // xyMessageBox
 
