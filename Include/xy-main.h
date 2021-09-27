@@ -53,13 +53,35 @@ INT WINAPI WinMain( _In_ HINSTANCE Instance, _In_opt_ HINSTANCE /*PrevInstance*/
 #elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
 
 #include <android/native_activity.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 [[maybe_unused]] JNIEXPORT void ANativeActivity_onCreate( ANativeActivity* pActivity, void* /*pSavedState*/, size_t /*SavedStateSize*/ )
 {
 	xyContext& rContext = xyGetContext();
 	rContext.pPlatformHandle = pActivity;
 
-	xyMain();
+	// Obtain the looper for the main thread
+	ALooper* pMainLooper = ALooper_forThread();
+	ALooper_acquire( pMainLooper );
+
+	// Listen for data on the main thread
+	pipe2( rContext.MainThreadPipe, O_NONBLOCK | O_CLOEXEC );
+	ALooper_addFd( pMainLooper, rContext.MainThreadPipe[ 0 ], 0, ALOOPER_EVENT_INPUT, []( int Read, int Events, void* pData ) -> int
+	{
+		xyRunnable* pRunnable;
+		if( read( Read, &pRunnable, sizeof( pRunnable ) ) == sizeof( pRunnable ) )
+		{
+			pRunnable->Execute();
+			delete pRunnable;
+		}
+
+		// Keep listening
+		return 1;
+
+	}, nullptr );
+
+	( void )std::async( &xyMain );
 
 } // ANativeActivity_onCreate
 

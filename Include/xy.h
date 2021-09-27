@@ -21,6 +21,7 @@
 /// Includes
 
 #include <span>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -84,8 +85,9 @@ enum class xyTheme
 
 struct xyContext
 {
-	std::span< char* > CommandLineArgs = { };
-	void*              pPlatformHandle = nullptr;
+	std::span< char* > CommandLineArgs     = { };
+	void*              pPlatformHandle     = nullptr;
+	int                MainThreadPipe[ 2 ] = { };
 
 }; // xyContext
 
@@ -219,6 +221,65 @@ extern std::vector< xyMonitor > xyGetAllDesktopMonitors( void );
 
 #endif // XY_ENV_DESKTOP
 
+#if defined( XY_ENV_PHONE )
+
+//////////////////////////////////////////////////////////////////////////
+/// Mobile-specific includes
+
+#include <future>
+#include <tuple>
+
+
+//////////////////////////////////////////////////////////////////////////
+/// Mobile-specific template functions
+
+struct xyRunnable
+{
+	virtual ~xyRunnable( void ) = default;
+
+	virtual void Execute( void ) = 0;
+
+}; // xyRunnable
+
+
+//////////////////////////////////////////////////////////////////////////
+/// Mobile-specific template functions
+
+template< typename Function, typename Tuple, size_t... Is >
+void xyInvokeWithTuple( Function&& rrFunction, const Tuple& rTuple, std::integer_sequence< size_t, Is... > )
+{
+	std::invoke( std::forward< Function >( rrFunction ), ( std::get< Is >( rTuple ) )... );
+
+} // xyInvokeWithTuple
+
+template< typename Function, typename... Args >
+void xyRunOnMainThread( Function&& rrFunction, Args&&... rrArgs )
+{
+	struct MainThreadRunnable : xyRunnable
+	{
+		void Execute( void ) override { xyInvokeWithTuple( Callback, Arguments, std::index_sequence_for< Args... >{ } ); }
+
+		std::decay_t< Function > Callback;
+		std::tuple< Args... >    Arguments;
+
+	}; // MainThreadRunnable
+
+	xyContext& rContext  = xyGetContext();
+	auto*      pRunnable = new MainThreadRunnable();
+	pRunnable->Callback  = std::forward< Function >( rrFunction );
+	pRunnable->Arguments = std::forward_as_tuple( std::forward< Args >( rrArgs )... );
+
+	if( write( rContext.MainThreadPipe[ 1 ], &pRunnable, sizeof( pRunnable ) ) != sizeof( pRunnable ) )
+	{
+		// Make sure we don't leak the runnable in case the write operation failed
+		delete pRunnable;
+	}
+
+} // xyRunOnMainThread
+
+
+#endif // XY_ENV_PHONE
+
 
 #if defined( XY_IMPLEMENT )
 
@@ -230,6 +291,7 @@ extern std::vector< xyMonitor > xyGetAllDesktopMonitors( void );
 #include <lmcons.h>
 #elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
 #include <android/native_activity.h>
+#include <unistd.h>
 #endif // XY_OS_ANDROID
 
 
@@ -255,36 +317,41 @@ bool xyMessageBox( std::string_view Title, std::string_view Message )
 
 #elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
 
-	xyContext&       rContext  = xyGetContext();
-	ANativeActivity& rActivity = *static_cast< ANativeActivity* >( rContext.pPlatformHandle );
-	JNIEnv*          pJNI      = rActivity.env;
+	xyRunOnMainThread(
+	[]( std::string Title, std::string Message )
+	{
+		xyContext&       rContext  = xyGetContext();
+		ANativeActivity& rActivity = *static_cast< ANativeActivity* >( rContext.pPlatformHandle );
+		JNIEnv*          pJNI      = rActivity.env;
 
-	// Easy way to tidy up all our local references when we're done
-	pJNI->PushLocalFrame( 16 );
+		// Easy way to tidy up all our local references when we're done
+		pJNI->PushLocalFrame( 16 );
 
-	// Obtain all necessary classes and method IDs
-	jclass    ClassBuilder            = pJNI->FindClass( "android/app/AlertDialog$Builder" );
-	jmethodID CtorBuilder             = pJNI->GetMethodID( ClassBuilder, "<init>", "(Landroid/content/Context;)V" );
-	jmethodID MethodSetTitle          = pJNI->GetMethodID( ClassBuilder, "setTitle", "(Ljava/lang/CharSequence;)Landroid/app/AlertDialog$Builder;" );
-	jmethodID MethodSetMessage        = pJNI->GetMethodID( ClassBuilder, "setMessage", "(Ljava/lang/CharSequence;)Landroid/app/AlertDialog$Builder;" );
-	jmethodID MethodSetPositiveButton = pJNI->GetMethodID( ClassBuilder, "setPositiveButton", "(Ljava/lang/CharSequence;Landroid/content/DialogInterface$OnClickListener;)Landroid/app/AlertDialog$Builder;" );
-	jmethodID MethodSetNegativeButton = pJNI->GetMethodID( ClassBuilder, "setNegativeButton", "(Ljava/lang/CharSequence;Landroid/content/DialogInterface$OnClickListener;)Landroid/app/AlertDialog$Builder;" );
-	jmethodID MethodSetCancelable     = pJNI->GetMethodID( ClassBuilder, "setCancelable", "(Z)Landroid/app/AlertDialog$Builder;" );
-	jmethodID MethodShow              = pJNI->GetMethodID( ClassBuilder, "show","()Landroid/app/AlertDialog;" );
+		// Obtain all necessary classes and method IDs
+		jclass    ClassBuilder            = pJNI->FindClass( "android/app/AlertDialog$Builder" );
+		jmethodID CtorBuilder             = pJNI->GetMethodID( ClassBuilder, "<init>", "(Landroid/content/Context;)V" );
+		jmethodID MethodSetTitle          = pJNI->GetMethodID( ClassBuilder, "setTitle", "(Ljava/lang/CharSequence;)Landroid/app/AlertDialog$Builder;" );
+		jmethodID MethodSetMessage        = pJNI->GetMethodID( ClassBuilder, "setMessage", "(Ljava/lang/CharSequence;)Landroid/app/AlertDialog$Builder;" );
+		jmethodID MethodSetPositiveButton = pJNI->GetMethodID( ClassBuilder, "setPositiveButton", "(Ljava/lang/CharSequence;Landroid/content/DialogInterface$OnClickListener;)Landroid/app/AlertDialog$Builder;" );
+		jmethodID MethodSetNegativeButton = pJNI->GetMethodID( ClassBuilder, "setNegativeButton", "(Ljava/lang/CharSequence;Landroid/content/DialogInterface$OnClickListener;)Landroid/app/AlertDialog$Builder;" );
+		jmethodID MethodSetCancelable     = pJNI->GetMethodID( ClassBuilder, "setCancelable", "(Z)Landroid/app/AlertDialog$Builder;" );
+		jmethodID MethodShow              = pJNI->GetMethodID( ClassBuilder, "show","()Landroid/app/AlertDialog;" );
 
-	// Create the alert dialog
-	jobject Builder = pJNI->NewObject( ClassBuilder, CtorBuilder, rActivity.clazz );
-	pJNI->CallObjectMethod( Builder, MethodSetTitle, pJNI->NewStringUTF( Title.data() ) );
-	pJNI->CallObjectMethod( Builder, MethodSetMessage, pJNI->NewStringUTF( Message.data() ) );
-	pJNI->CallObjectMethod( Builder, MethodSetPositiveButton, pJNI->NewStringUTF( "Yes" ), nullptr );
-	pJNI->CallObjectMethod( Builder, MethodSetNegativeButton, pJNI->NewStringUTF( "No" ), nullptr );
-	pJNI->CallObjectMethod( Builder, MethodSetCancelable, false );
-	pJNI->CallObjectMethod( Builder, MethodShow );
+		// Create the alert dialog
+		jobject Builder = pJNI->NewObject( ClassBuilder, CtorBuilder, rActivity.clazz );
+		pJNI->CallObjectMethod( Builder, MethodSetTitle, pJNI->NewStringUTF( Title.data() ) );
+		pJNI->CallObjectMethod( Builder, MethodSetMessage, pJNI->NewStringUTF( Message.data() ) );
+		pJNI->CallObjectMethod( Builder, MethodSetPositiveButton, pJNI->NewStringUTF( "Yes" ), nullptr );
+		pJNI->CallObjectMethod( Builder, MethodSetNegativeButton, pJNI->NewStringUTF( "No" ), nullptr );
+		pJNI->CallObjectMethod( Builder, MethodSetCancelable, false );
+		pJNI->CallObjectMethod( Builder, MethodShow );
 
-	// Clean up local references
-	pJNI->PopLocalFrame( nullptr );
+		// Clean up local references
+		pJNI->PopLocalFrame( nullptr );
 
-	// We have no way of polling the selection because the dialog has not been presented to the user yet.
+	}, std::string( Title ), std::string( Message ) );
+
+	// We have no way of polling the button selection
 	return false;
 
 #endif // XY_OS_ANDROID
@@ -318,7 +385,7 @@ xyDisplay xyGetDisplay( void )
 
 #if defined( XY_OS_WINDOWS )
 
-	return { .Width  = static_cast< uint32_t >( GetSystemMetrics( SM_CXVIRTUALSCREEN ) )
+	return { .Width  = static_cast< uint32_t >( GetSystemMetrics( SM_CXVIRTUALSCREEN ) ),
 	         .Height = static_cast< uint32_t >( GetSystemMetrics( SM_CYVIRTUALSCREEN ) ) };
 
 #endif // XY_OS_WINDOWS
