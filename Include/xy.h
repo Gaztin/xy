@@ -317,8 +317,7 @@ bool xyMessageBox( std::string_view Title, std::string_view Message )
 
 #elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
 
-	xyRunOnMainThread(
-	[]( std::string Title, std::string Message )
+	xyRunOnMainThread( []( std::string Title, std::string Message )
 	{
 		xyContext&       rContext  = xyGetContext();
 		ANativeActivity& rActivity = *static_cast< ANativeActivity* >( rContext.pPlatformHandle );
