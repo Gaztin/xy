@@ -117,14 +117,14 @@ struct xyDisplay
 //////////////////////////////////////////////////////////////////////////
 /// Functions
 
-/*
+/**
  * Obtains the internal xy context where all the global data is stored
  *
  * @return A reference to the context data.
  */
 extern xyContext& xyGetContext( void );
 
-/*
+/**
  * Prompts a system message box containing a user-defined message and an 'OK' button.
  * The current thread is blocked until the message box is closed.
  *
@@ -133,14 +133,14 @@ extern xyContext& xyGetContext( void );
  */
 extern void xyMessageBox( std::string_view Title, std::string_view Message );
 
-/*
+/**
  * Obtains information about the current device.
  *
  * @return The device data.
  */
 extern xyDevice xyGetDevice( void );
 
-/*
+/**
  * Obtains the display of this device.
  * In desktop environments, this is the virtual screen. The virtual screen is the collection of all monitors.
  * To obtain individual desktop monitors, refer to xyGetPrimaryDesktopMonitor or xyGetAllDesktopMonitors.
@@ -149,7 +149,7 @@ extern xyDevice xyGetDevice( void );
  */
 extern xyDisplay xyGetDisplay( void );
 
-/*
+/**
  * Obtains the preferred theme of this device.
  *
  * @return The theme enumerator.
@@ -232,7 +232,7 @@ struct xyRunnable
 //////////////////////////////////////////////////////////////////////////
 /// Android-specific template functions
 
-/*
+/**
  * Invokes a callable object with arguments from a packed tuple.
  *
  * @param rrFunction The object that gets called.
@@ -245,7 +245,7 @@ auto xyInvokeWithTuple( Function&& rrFunction, const Tuple& rTuple, std::integer
 
 } // xyInvokeWithTuple
 
-/*
+/**
  * Runs a callable object on the java thread and waits for it to finish.
  *
  * @param rrFunction The object that gets called.
@@ -285,7 +285,7 @@ void xyRunOnJavaThread( Function&& rrFunction, Args&&... rrArgs )
 
 } // xyRunOnJavaThread
 
-/*
+/**
  * Runs a callable object on the java thread and waits for it to finish.
  *
  * @param rrFunction The object that gets called.
