@@ -131,13 +131,13 @@ struct xyUser
 extern xyContext& xyGetContext( void );
 
 /*
-* Prompts a system message box containing a user-defined message and two buttons: 'Yes' and 'No'.
-*
-* @param Title The title of the message box window.
-* @param Message The content of the message text box.
-* @return True if 'Yes' was clicked, false otherwise.
-*/
-extern bool xyMessageBox( std::string_view Title, std::string_view Message );
+ * Prompts a system message box containing a user-defined message and an 'OK' button.
+ * The current thread is blocked until the message box is closed.
+ *
+ * @param Title The title of the message box window.
+ * @param Message The content of the message text box.
+ */
+extern void xyMessageBox( std::string_view Title, std::string_view Message );
 
 /*
  * Obtains information about the current device.
@@ -378,12 +378,12 @@ xyContext& xyGetContext( void )
 
 //////////////////////////////////////////////////////////////////////////
 
-bool xyMessageBox( std::string_view Title, std::string_view Message )
+void xyMessageBox( std::string_view Title, std::string_view Message )
 {
 
 #if defined( XY_OS_WINDOWS )
 
-	return ( MessageBoxA( NULL, Message.data(), Title.data(), MB_YESNO | MB_ICONINFORMATION | MB_TASKMODAL ) == IDYES );
+	MessageBoxA( NULL, Message.data(), Title.data(), MB_OK | MB_ICONINFORMATION | MB_TASKMODAL );
 
 #elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
 
@@ -397,21 +397,19 @@ bool xyMessageBox( std::string_view Title, std::string_view Message )
 		pJNI->PushLocalFrame( 16 );
 
 		// Obtain all necessary classes and method IDs
-		jclass    ClassBuilder            = pJNI->FindClass( "android/app/AlertDialog$Builder" );
-		jmethodID CtorBuilder             = pJNI->GetMethodID( ClassBuilder, "<init>", "(Landroid/content/Context;)V" );
-		jmethodID MethodSetTitle          = pJNI->GetMethodID( ClassBuilder, "setTitle", "(Ljava/lang/CharSequence;)Landroid/app/AlertDialog$Builder;" );
-		jmethodID MethodSetMessage        = pJNI->GetMethodID( ClassBuilder, "setMessage", "(Ljava/lang/CharSequence;)Landroid/app/AlertDialog$Builder;" );
-		jmethodID MethodSetPositiveButton = pJNI->GetMethodID( ClassBuilder, "setPositiveButton", "(Ljava/lang/CharSequence;Landroid/content/DialogInterface$OnClickListener;)Landroid/app/AlertDialog$Builder;" );
-		jmethodID MethodSetNegativeButton = pJNI->GetMethodID( ClassBuilder, "setNegativeButton", "(Ljava/lang/CharSequence;Landroid/content/DialogInterface$OnClickListener;)Landroid/app/AlertDialog$Builder;" );
-		jmethodID MethodSetCancelable     = pJNI->GetMethodID( ClassBuilder, "setCancelable", "(Z)Landroid/app/AlertDialog$Builder;" );
-		jmethodID MethodShow              = pJNI->GetMethodID( ClassBuilder, "show","()Landroid/app/AlertDialog;" );
+		jclass    ClassBuilder           = pJNI->FindClass( "android/app/AlertDialog$Builder" );
+		jmethodID CtorBuilder            = pJNI->GetMethodID( ClassBuilder, "<init>", "(Landroid/content/Context;)V" );
+		jmethodID MethodSetTitle         = pJNI->GetMethodID( ClassBuilder, "setTitle", "(Ljava/lang/CharSequence;)Landroid/app/AlertDialog$Builder;" );
+		jmethodID MethodSetMessage       = pJNI->GetMethodID( ClassBuilder, "setMessage", "(Ljava/lang/CharSequence;)Landroid/app/AlertDialog$Builder;" );
+		jmethodID MethodSetNeutralButton = pJNI->GetMethodID( ClassBuilder, "setNeutralButton", "(Ljava/lang/CharSequence;Landroid/content/DialogInterface$OnClickListener;)Landroid/app/AlertDialog$Builder;" );
+		jmethodID MethodSetCancelable    = pJNI->GetMethodID( ClassBuilder, "setCancelable", "(Z)Landroid/app/AlertDialog$Builder;" );
+		jmethodID MethodShow             = pJNI->GetMethodID( ClassBuilder, "show","()Landroid/app/AlertDialog;" );
 
 		// Create the alert dialog
 		jobject Builder = pJNI->NewObject( ClassBuilder, CtorBuilder, rActivity.clazz );
 		pJNI->CallObjectMethod( Builder, MethodSetTitle, pJNI->NewStringUTF( Title.data() ) );
 		pJNI->CallObjectMethod( Builder, MethodSetMessage, pJNI->NewStringUTF( Message.data() ) );
-		pJNI->CallObjectMethod( Builder, MethodSetPositiveButton, pJNI->NewStringUTF( "Yes" ), nullptr );
-		pJNI->CallObjectMethod( Builder, MethodSetNegativeButton, pJNI->NewStringUTF( "No" ), nullptr );
+		pJNI->CallObjectMethod( Builder, MethodSetNeutralButton, pJNI->NewStringUTF( "OK" ), nullptr );
 		pJNI->CallObjectMethod( Builder, MethodSetCancelable, false );
 		jobject Alert = pJNI->CallObjectMethod( Builder, MethodShow );
 		Alert         = pJNI->NewGlobalRef( Alert );
@@ -423,10 +421,21 @@ bool xyMessageBox( std::string_view Title, std::string_view Message )
 
 	}, std::string( Title ), std::string( Message ) );
 
-	Alert = Alert;
+	xyContext&       rContext  = xyGetContext();
+	ANativeActivity* pActivity = static_cast< ANativeActivity* >( rContext.pPlatformHandle );
+	JNIEnv*          pJNI;
+	pActivity->vm->AttachCurrentThread( &pJNI, nullptr );
 
-	// We have no way of polling the button selection
-	return false;
+	jclass    ClassAlertDialog = pJNI->GetObjectClass( Alert );
+	jmethodID MethodIsShowing  = pJNI->GetMethodID( ClassAlertDialog, "isShowing", "()Z" );
+
+	// Sleep until dialog is closed
+	while( pJNI->CallBooleanMethod( Alert, MethodIsShowing ) )
+		std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+
+	pJNI->DeleteGlobalRef( Alert );
+
+	pActivity->vm->DetachCurrentThread();
 
 #endif // XY_OS_ANDROID
 
