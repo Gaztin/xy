@@ -113,12 +113,6 @@ struct xyDisplay
 
 }; // xyDisplay
 
-struct xyUser
-{
-	std::string Name;
-
-}; // xyUser
-
 
 //////////////////////////////////////////////////////////////////////////
 /// Functions
@@ -154,13 +148,6 @@ extern xyDevice xyGetDevice( void );
  * @return The display data.
  */
 extern xyDisplay xyGetDisplay( void );
-
-/*
- * Obtains information about the current user on this device.
- *
- * @return The user data.
- */
-extern xyUser xyGetUser( void );
 
 /*
  * Obtains the preferred theme of this device.
@@ -360,6 +347,7 @@ auto xyRunOnJavaThread( Function&& rrFunction, Args&&... rrArgs )
 #include <windows.h>
 #include <lmcons.h>
 #elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
+#include <android/configuration.h>
 #include <android/native_activity.h>
 #include <unistd.h>
 #endif // XY_OS_ANDROID
@@ -457,7 +445,29 @@ xyDevice xyGetDevice( void )
 
 	return { };
 
-#endif // XY_OS_WINDOWS
+#elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
+
+	xyContext&       rContext  = xyGetContext();
+	ANativeActivity* pActivity = static_cast< ANativeActivity* >( rContext.pPlatformHandle );
+	JNIEnv*          pJNI;
+	pActivity->vm->AttachCurrentThread( &pJNI, nullptr );
+
+	jclass      BuildClass           = pJNI->FindClass( "android/os/Build" );
+	jfieldID    ManufacturerField    = pJNI->GetStaticFieldID( BuildClass, "MANUFACTURER", "Ljava/lang/String;" );
+	jfieldID    ModelField           = pJNI->GetStaticFieldID( BuildClass, "MODEL", "Ljava/lang/String;" );
+	jstring     ManufacturerName     = static_cast< jstring >( pJNI->GetStaticObjectField( BuildClass, ManufacturerField ) );
+	jstring     ModelName            = static_cast< jstring >( pJNI->GetStaticObjectField( BuildClass, ModelField ) );
+	const char* pManufacturerNameUTF = pJNI->GetStringUTFChars( ManufacturerName, nullptr );
+	const char* pModelNameUTF        = pJNI->GetStringUTFChars( ModelName, nullptr );
+	std::string DeviceName           = std::string( pManufacturerNameUTF ) + ' ' + pModelNameUTF;
+
+	pJNI->ReleaseStringUTFChars( ModelName, pModelNameUTF );
+	pJNI->ReleaseStringUTFChars( ManufacturerName, pManufacturerNameUTF );
+	pActivity->vm->DetachCurrentThread();
+
+	return { .Name=std::move( DeviceName ) };
+
+#endif // XY_OS_ANDROID
 
 } // xyGetDevice
 
@@ -471,34 +481,36 @@ xyDisplay xyGetDisplay( void )
 	return { .Width  = static_cast< uint32_t >( GetSystemMetrics( SM_CXVIRTUALSCREEN ) ),
 	         .Height = static_cast< uint32_t >( GetSystemMetrics( SM_CYVIRTUALSCREEN ) ) };
 
-#endif // XY_OS_WINDOWS
+#elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
+
+	xyContext&       rContext  = xyGetContext();
+	ANativeActivity* pActivity = static_cast< ANativeActivity* >( rContext.pPlatformHandle );
+	JNIEnv*          pJNI;
+	pActivity->vm->AttachCurrentThread( &pJNI, nullptr );
+
+	jobject WindowManager = pJNI->CallObjectMethod( pActivity->clazz, pJNI->GetMethodID( pJNI->GetObjectClass( pActivity->clazz ), "getWindowManager", "()Landroid/view/WindowManager;" ) );
+	jobject WindowMetrics = pJNI->CallObjectMethod( WindowManager, pJNI->GetMethodID( pJNI->GetObjectClass( WindowManager ), "getMaximumWindowMetrics", "()Landroid/view/WindowMetrics;" ) );
+	jobject BoundsRect    = pJNI->CallObjectMethod( WindowMetrics, pJNI->GetMethodID( pJNI->GetObjectClass( WindowMetrics ), "getBounds", "()Landroid/graphics/Rect;" ) );
+	jclass  RectClass     = pJNI->GetObjectClass( BoundsRect );
+	jint    Left          = pJNI->GetIntField( BoundsRect, pJNI->GetFieldID( RectClass, "left", "I" ) );
+	jint    Top           = pJNI->GetIntField( BoundsRect, pJNI->GetFieldID( RectClass, "top", "I" ) );
+	jint    Right         = pJNI->GetIntField( BoundsRect, pJNI->GetFieldID( RectClass, "right", "I" ) );
+	jint    Bottom        = pJNI->GetIntField( BoundsRect, pJNI->GetFieldID( RectClass, "bottom", "I" ) );
+
+	pActivity->vm->DetachCurrentThread();
+
+	return { .Width=static_cast< uint32_t >( Right - Left ), .Height=static_cast< uint32_t >( Bottom - Top ) };
+
+#endif // XY_OS_ANDROID
 
 } // xyGetDisplay
 
 //////////////////////////////////////////////////////////////////////////
 
-xyUser xyGetUser( void )
-{
-
-#if defined( XY_OS_WINDOWS )
-
-	CHAR  Buffer[ UNLEN + 1 ];
-	DWORD Size = static_cast< DWORD >( std::size( Buffer ) );
-	if( GetUserNameA( Buffer, &Size ) )
-	{
-		return { .Name={ Buffer, Size } };
-	}
-
-	return { };
-
-#endif // XY_OS_WINDOWS
-
-} // xyGetUser
-
-//////////////////////////////////////////////////////////////////////////
-
 xyTheme xyGetPreferredTheme( void )
 {
+	// Default to light theme
+	xyTheme Theme = xyTheme::Light;
 
 #if defined( XY_OS_WINDOWS )
 
@@ -506,15 +518,27 @@ xyTheme xyGetPreferredTheme( void )
 	DWORD AppsUseLightTheme;
 	DWORD DataSize = sizeof( AppsUseLightTheme );
 	if( RegGetValueA( HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize", "AppsUseLightTheme", RRF_RT_REG_DWORD, NULL, &AppsUseLightTheme, &DataSize ) == ERROR_SUCCESS )
-		return AppsUseLightTheme ? xyTheme::Light : xyTheme::Dark;
-
-	return xyTheme::Light;
+		Theme = AppsUseLightTheme ? xyTheme::Light : xyTheme::Dark;
 
 #elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
 
-	return xyTheme::Light;
+	xyContext&       rContext       = xyGetContext();
+	ANativeActivity* pActivity      = static_cast< ANativeActivity* >( rContext.pPlatformHandle );
+	AConfiguration*  pConfiguration = AConfiguration_new();
+	AConfiguration_fromAssetManager( pConfiguration, pActivity->assetManager );
+
+	switch( AConfiguration_getUiModeNight( pConfiguration ) )
+	{
+		case ACONFIGURATION_UI_MODE_NIGHT_NO:  { Theme = xyTheme::Light; } break;
+		case ACONFIGURATION_UI_MODE_NIGHT_YES: { Theme = xyTheme::Dark;  } break;
+		default: break;
+	}
+
+	AConfiguration_delete( pConfiguration );
 
 #endif // XY_OS_ANDROID
+
+	return Theme;
 
 } // xyGetPreferredTheme
 
