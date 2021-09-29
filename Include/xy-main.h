@@ -81,7 +81,8 @@ INT WINAPI WinMain( _In_ HINSTANCE Instance, _In_opt_ HINSTANCE /*PrevInstance*/
 
 	}, nullptr );
 
-	( void )std::async( &xyMain );
+	std::thread AppThread( &xyMain );
+	AppThread.detach();
 
 } // ANativeActivity_onCreate
 
