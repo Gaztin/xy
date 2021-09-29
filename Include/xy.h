@@ -114,6 +114,12 @@ struct xyDisplay
 
 }; // xyDisplay
 
+struct xyLanguage
+{
+	std::string LocaleName;
+
+}; // xyLanguage
+
 
 //////////////////////////////////////////////////////////////////////////
 /// Functions
@@ -156,6 +162,13 @@ extern xyDisplay xyGetDisplay( void );
  * @return The theme enumerator.
  */
 extern xyTheme xyGetPreferredTheme( void );
+
+/**
+ * Obtains the system language.
+ *
+ * @return The language code.
+ */
+extern xyLanguage xyGetLanguage( void );
 
 
 #if defined( XY_ENV_DESKTOP )
@@ -568,6 +581,35 @@ xyTheme xyGetPreferredTheme( void )
 	return Theme;
 
 } // xyGetPreferredTheme
+
+//////////////////////////////////////////////////////////////////////////
+
+xyLanguage xyGetLanguage( void )
+{
+
+#if defined( XY_OS_WINDOWS )
+
+	xyLanguage Language;
+	WCHAR      Buffer[ LOCALE_NAME_MAX_LENGTH ];
+	GetUserDefaultLocaleName( Buffer, static_cast< int >( std::size( Buffer ) ) );
+
+	const size_t LocaleNameLength = wcslen( Buffer );
+	Language.LocaleName.resize( LocaleNameLength );
+	WideCharToMultiByte( CP_UTF8, 0, Buffer, static_cast< int >( LocaleNameLength ), Language.LocaleName.data(), static_cast< int >( Language.LocaleName.size() ), NULL, NULL );
+
+	return Language;
+
+#elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
+
+	xyContext& rContext = xyGetContext();
+	char       LanguageCode[ 2 ];
+	AConfiguration_getLanguage( rContext.pPlatformImpl->pConfiguration, LanguageCode );
+
+	return { .LocaleName=std::string( LanguageCode, 2 ) };
+
+#endif // XY_OS_ANDROID
+
+} // xyGetLanguage
 
 
 #if defined( XY_ENV_DESKTOP )
