@@ -73,7 +73,6 @@ INT WINAPI WinMain( _In_ HINSTANCE Instance, _In_opt_ HINSTANCE /*PrevInstance*/
 		if( read( Read, &pRunnable, sizeof( pRunnable ) ) == sizeof( pRunnable ) )
 		{
 			pRunnable->Execute();
-			delete pRunnable;
 		}
 
 		// Keep listening

@@ -221,17 +221,17 @@ extern std::vector< xyMonitor > xyGetAllDesktopMonitors( void );
 
 #endif // XY_ENV_DESKTOP
 
-#if defined( XY_ENV_PHONE )
+#if defined( XY_OS_ANDROID )
 
 //////////////////////////////////////////////////////////////////////////
-/// Mobile-specific includes
+/// Android-specific includes
 
-#include <future>
+#include <thread>
 #include <tuple>
 
 
 //////////////////////////////////////////////////////////////////////////
-/// Mobile-specific template functions
+/// Android-specific template functions
 
 struct xyRunnable
 {
@@ -243,42 +243,112 @@ struct xyRunnable
 
 
 //////////////////////////////////////////////////////////////////////////
-/// Mobile-specific template functions
+/// Android-specific template functions
 
+/*
+ * Invokes a callable object with arguments from a packed tuple.
+ *
+ * @param rrFunction The object that gets called.
+ * @param rTuple The tuple that gets unpacked into arguments.
+ */
 template< typename Function, typename Tuple, size_t... Is >
-void xyInvokeWithTuple( Function&& rrFunction, const Tuple& rTuple, std::integer_sequence< size_t, Is... > )
+auto xyInvokeWithTuple( Function&& rrFunction, const Tuple& rTuple, std::integer_sequence< size_t, Is... > )
 {
-	std::invoke( std::forward< Function >( rrFunction ), ( std::get< Is >( rTuple ) )... );
+	return std::invoke( std::forward< Function >( rrFunction ), ( std::get< Is >( rTuple ) )... );
 
 } // xyInvokeWithTuple
 
-template< typename Function, typename... Args >
-void xyRunOnMainThread( Function&& rrFunction, Args&&... rrArgs )
+/*
+ * Runs a callable object on the java thread and waits for it to finish.
+ *
+ * @param rrFunction The object that gets called.
+ * @param rrArgs Optional arguments that gets passed to the function.
+ */
+template< typename Function, typename... Args
+        , typename = typename std::enable_if_t< std::is_void_v< std::invoke_result_t< Function, Args... > > > >
+void xyRunOnJavaThread( Function&& rrFunction, Args&&... rrArgs )
 {
-	struct MainThreadRunnable : xyRunnable
+	struct JavaRunnable : xyRunnable
 	{
-		void Execute( void ) override { xyInvokeWithTuple( Callback, Arguments, std::index_sequence_for< Args... >{ } ); }
+		virtual void Execute( void ) override
+		{
+			xyInvokeWithTuple( Callback, Arguments, std::index_sequence_for< Args... >{ } );
+			Finished = true;
+
+		} // Execute
 
 		std::decay_t< Function > Callback;
 		std::tuple< Args... >    Arguments;
+		bool                     Finished = false;
 
-	}; // MainThreadRunnable
+	}; // JavaRunnable
 
 	xyContext& rContext  = xyGetContext();
-	auto*      pRunnable = new MainThreadRunnable();
+	auto*      pRunnable = new JavaRunnable();
 	pRunnable->Callback  = std::forward< Function >( rrFunction );
 	pRunnable->Arguments = std::forward_as_tuple( std::forward< Args >( rrArgs )... );
 
-	if( write( rContext.MainThreadPipe[ 1 ], &pRunnable, sizeof( pRunnable ) ) != sizeof( pRunnable ) )
+	if( write( rContext.MainThreadPipe[ 1 ], &pRunnable, sizeof( pRunnable ) ) == sizeof( pRunnable ) )
 	{
-		// Make sure we don't leak the runnable in case the write operation failed
-		delete pRunnable;
+		while( !pRunnable->Finished )
+			std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
 	}
 
-} // xyRunOnMainThread
+	delete pRunnable;
+
+} // xyRunOnJavaThread
+
+/*
+ * Runs a callable object on the java thread and waits for it to finish.
+ *
+ * @param rrFunction The object that gets called.
+ * @param rrArgs Optional arguments that gets passed to the function.
+ * @return The return value of the call.
+ */
+template< typename Function, typename... Args
+        , typename = typename std::enable_if_t< !std::is_void_v< std::invoke_result_t< Function, Args... > > > >
+auto xyRunOnJavaThread( Function&& rrFunction, Args&&... rrArgs )
+{
+	using ReturnType = std::invoke_result_t< Function, Args... >;
+
+	struct JavaRunnable : xyRunnable
+	{
+		virtual void Execute( void ) override
+		{
+			ReturnValue = xyInvokeWithTuple( Callback, Arguments, std::index_sequence_for< Args... >{ } );
+			Finished    = true;
+
+		} // Execute
+
+		std::decay_t< Function > Callback;
+		std::tuple< Args... >    Arguments;
+		ReturnType               ReturnValue;
+		bool                     Finished = false;
+
+	}; // JavaRunnable
+
+	xyContext& rContext  = xyGetContext();
+	auto* pRunnable      = new JavaRunnable();
+	pRunnable->Callback  = std::forward< Function >( rrFunction );
+	pRunnable->Arguments = std::forward_as_tuple( std::forward< Args >( rrArgs )... );
+
+	if( write( rContext.MainThreadPipe[ 1 ], &pRunnable, sizeof( pRunnable ) ) == sizeof( pRunnable ) )
+	{
+		while( !pRunnable->Finished )
+			std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+
+		ReturnType ReturnValue = std::move( pRunnable->ReturnValue );
+		delete pRunnable;
+		return ReturnValue;
+	}
+
+	delete pRunnable;
+	return ReturnType{};
+
+} // xyRunOnJavaThread
 
 
-#endif // XY_ENV_PHONE
+#endif // XY_OS_ANDROID
 
 
 #if defined( XY_IMPLEMENT )
@@ -317,7 +387,7 @@ bool xyMessageBox( std::string_view Title, std::string_view Message )
 
 #elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
 
-	xyRunOnMainThread( []( std::string Title, std::string Message )
+	jobject Alert = xyRunOnJavaThread( []( std::string Title, std::string Message )
 	{
 		xyContext&       rContext  = xyGetContext();
 		ANativeActivity& rActivity = *static_cast< ANativeActivity* >( rContext.pPlatformHandle );
@@ -343,12 +413,17 @@ bool xyMessageBox( std::string_view Title, std::string_view Message )
 		pJNI->CallObjectMethod( Builder, MethodSetPositiveButton, pJNI->NewStringUTF( "Yes" ), nullptr );
 		pJNI->CallObjectMethod( Builder, MethodSetNegativeButton, pJNI->NewStringUTF( "No" ), nullptr );
 		pJNI->CallObjectMethod( Builder, MethodSetCancelable, false );
-		pJNI->CallObjectMethod( Builder, MethodShow );
+		jobject Alert = pJNI->CallObjectMethod( Builder, MethodShow );
+		Alert         = pJNI->NewGlobalRef( Alert );
 
 		// Clean up local references
 		pJNI->PopLocalFrame( nullptr );
 
+		return Alert;
+
 	}, std::string( Title ), std::string( Message ) );
+
+	Alert = Alert;
 
 	// We have no way of polling the button selection
 	return false;
