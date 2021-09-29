@@ -20,10 +20,10 @@
 //////////////////////////////////////////////////////////////////////////
 /// Includes
 
+#include <memory>
 #include <span>
 #include <string>
 #include <string_view>
-#include <vector>
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -83,11 +83,12 @@ enum class xyTheme
 //////////////////////////////////////////////////////////////////////////
 /// Data structures
 
+struct xyPlatformImpl;
+
 struct xyContext
 {
-	std::span< char* > CommandLineArgs     = { };
-	void*              pPlatformHandle     = nullptr;
-	int                MainThreadPipe[ 2 ] = { };
+	std::span< char* >                CommandLineArgs;
+	std::unique_ptr< xyPlatformImpl > pPlatformImpl;
 
 }; // xyContext
 
@@ -160,6 +161,12 @@ extern xyTheme xyGetPreferredTheme( void );
 #if defined( XY_ENV_DESKTOP )
 
 //////////////////////////////////////////////////////////////////////////
+/// Desktop-specific includes
+
+#include <vector>
+
+
+//////////////////////////////////////////////////////////////////////////
 /// Desktop-specific data structures
 
 struct xyMonitor
@@ -208,7 +215,25 @@ extern std::vector< xyMonitor > xyGetAllDesktopMonitors( void );
 
 #endif // XY_ENV_DESKTOP
 
-#if defined( XY_OS_ANDROID )
+#if defined( XY_OS_WINDOWS )
+
+//////////////////////////////////////////////////////////////////////////
+/// Windows-specific includes
+
+#include <windows.h>
+
+
+//////////////////////////////////////////////////////////////////////////
+/// Windows-specific data structures
+
+struct xyPlatformImpl
+{
+	HINSTANCE ApplicationInstanceHandle = NULL;
+
+}; // xyPlatformImpl
+
+
+#elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
 
 //////////////////////////////////////////////////////////////////////////
 /// Android-specific includes
@@ -216,9 +241,20 @@ extern std::vector< xyMonitor > xyGetAllDesktopMonitors( void );
 #include <thread>
 #include <tuple>
 
+#include <android/configuration.h>
+#include <android/native_activity.h>
+
 
 //////////////////////////////////////////////////////////////////////////
-/// Android-specific template functions
+/// Android-specific data structures
+
+struct xyPlatformImpl
+{
+	ANativeActivity* pNativeActivity     = nullptr;
+	AConfiguration*  pConfiguration      = nullptr;
+	int              JavaThreadPipe[ 2 ] = { };
+
+}; // xyPlatformImpl
 
 struct xyRunnable
 {
@@ -275,7 +311,7 @@ void xyRunOnJavaThread( Function&& rrFunction, Args&&... rrArgs )
 	pRunnable->Callback  = std::forward< Function >( rrFunction );
 	pRunnable->Arguments = std::forward_as_tuple( std::forward< Args >( rrArgs )... );
 
-	if( write( rContext.MainThreadPipe[ 1 ], &pRunnable, sizeof( pRunnable ) ) == sizeof( pRunnable ) )
+	if( write( rContext.pPlatformImpl->JavaThreadPipe[ 1 ], &pRunnable, sizeof( pRunnable ) ) == sizeof( pRunnable ) )
 	{
 		while( !pRunnable->Finished )
 			std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
@@ -319,7 +355,7 @@ auto xyRunOnJavaThread( Function&& rrFunction, Args&&... rrArgs )
 	pRunnable->Callback  = std::forward< Function >( rrFunction );
 	pRunnable->Arguments = std::forward_as_tuple( std::forward< Args >( rrArgs )... );
 
-	if( write( rContext.MainThreadPipe[ 1 ], &pRunnable, sizeof( pRunnable ) ) == sizeof( pRunnable ) )
+	if( write( rContext.pPlatformImpl->JavaThreadPipe[ 1 ], &pRunnable, sizeof( pRunnable ) ) == sizeof( pRunnable ) )
 	{
 		while( !pRunnable->Finished )
 			std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
@@ -344,7 +380,6 @@ auto xyRunOnJavaThread( Function&& rrFunction, Args&&... rrArgs )
 /// Includes
 
 #if defined( XY_OS_WINDOWS )
-#include <windows.h>
 #include <lmcons.h>
 #elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
 #include <android/configuration.h>
@@ -377,9 +412,8 @@ void xyMessageBox( std::string_view Title, std::string_view Message )
 
 	jobject Alert = xyRunOnJavaThread( []( std::string Title, std::string Message )
 	{
-		xyContext&       rContext  = xyGetContext();
-		ANativeActivity& rActivity = *static_cast< ANativeActivity* >( rContext.pPlatformHandle );
-		JNIEnv*          pJNI      = rActivity.env;
+		xyContext& rContext = xyGetContext();
+		JNIEnv*    pJNI     = rContext.pPlatformImpl->pNativeActivity->env;
 
 		// Easy way to tidy up all our local references when we're done
 		pJNI->PushLocalFrame( 16 );
@@ -394,7 +428,7 @@ void xyMessageBox( std::string_view Title, std::string_view Message )
 		jmethodID MethodShow             = pJNI->GetMethodID( ClassBuilder, "show","()Landroid/app/AlertDialog;" );
 
 		// Create the alert dialog
-		jobject Builder = pJNI->NewObject( ClassBuilder, CtorBuilder, rActivity.clazz );
+		jobject Builder = pJNI->NewObject( ClassBuilder, CtorBuilder, rContext.pPlatformImpl->pNativeActivity->clazz );
 		pJNI->CallObjectMethod( Builder, MethodSetTitle, pJNI->NewStringUTF( Title.data() ) );
 		pJNI->CallObjectMethod( Builder, MethodSetMessage, pJNI->NewStringUTF( Message.data() ) );
 		pJNI->CallObjectMethod( Builder, MethodSetNeutralButton, pJNI->NewStringUTF( "OK" ), nullptr );
@@ -409,10 +443,9 @@ void xyMessageBox( std::string_view Title, std::string_view Message )
 
 	}, std::string( Title ), std::string( Message ) );
 
-	xyContext&       rContext  = xyGetContext();
-	ANativeActivity* pActivity = static_cast< ANativeActivity* >( rContext.pPlatformHandle );
-	JNIEnv*          pJNI;
-	pActivity->vm->AttachCurrentThread( &pJNI, nullptr );
+	xyContext& rContext = xyGetContext();
+	JNIEnv*    pJNI;
+	rContext.pPlatformImpl->pNativeActivity->vm->AttachCurrentThread( &pJNI, nullptr );
 
 	jclass    ClassAlertDialog = pJNI->GetObjectClass( Alert );
 	jmethodID MethodIsShowing  = pJNI->GetMethodID( ClassAlertDialog, "isShowing", "()Z" );
@@ -423,7 +456,7 @@ void xyMessageBox( std::string_view Title, std::string_view Message )
 
 	pJNI->DeleteGlobalRef( Alert );
 
-	pActivity->vm->DetachCurrentThread();
+	rContext.pPlatformImpl->pNativeActivity->vm->DetachCurrentThread();
 
 #endif // XY_OS_ANDROID
 
@@ -447,10 +480,9 @@ xyDevice xyGetDevice( void )
 
 #elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
 
-	xyContext&       rContext  = xyGetContext();
-	ANativeActivity* pActivity = static_cast< ANativeActivity* >( rContext.pPlatformHandle );
-	JNIEnv*          pJNI;
-	pActivity->vm->AttachCurrentThread( &pJNI, nullptr );
+	xyContext& rContext = xyGetContext();
+	JNIEnv*    pJNI;
+	rContext.pPlatformImpl->pNativeActivity->vm->AttachCurrentThread( &pJNI, nullptr );
 
 	jclass      BuildClass           = pJNI->FindClass( "android/os/Build" );
 	jfieldID    ManufacturerField    = pJNI->GetStaticFieldID( BuildClass, "MANUFACTURER", "Ljava/lang/String;" );
@@ -463,7 +495,7 @@ xyDevice xyGetDevice( void )
 
 	pJNI->ReleaseStringUTFChars( ModelName, pModelNameUTF );
 	pJNI->ReleaseStringUTFChars( ManufacturerName, pManufacturerNameUTF );
-	pActivity->vm->DetachCurrentThread();
+	rContext.pPlatformImpl->pNativeActivity->vm->DetachCurrentThread();
 
 	return { .Name=std::move( DeviceName ) };
 
@@ -483,12 +515,12 @@ xyDisplay xyGetDisplay( void )
 
 #elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
 
-	xyContext&       rContext  = xyGetContext();
-	ANativeActivity* pActivity = static_cast< ANativeActivity* >( rContext.pPlatformHandle );
-	JNIEnv*          pJNI;
-	pActivity->vm->AttachCurrentThread( &pJNI, nullptr );
+	xyContext& rContext = xyGetContext();
+	JNIEnv*    pJNI;
+	rContext.pPlatformImpl->pNativeActivity->vm->AttachCurrentThread( &pJNI, nullptr );
 
-	jobject WindowManager = pJNI->CallObjectMethod( pActivity->clazz, pJNI->GetMethodID( pJNI->GetObjectClass( pActivity->clazz ), "getWindowManager", "()Landroid/view/WindowManager;" ) );
+	jobject Activity      = rContext.pPlatformImpl->pNativeActivity->clazz;
+	jobject WindowManager = pJNI->CallObjectMethod( Activity, pJNI->GetMethodID( pJNI->GetObjectClass( Activity ), "getWindowManager", "()Landroid/view/WindowManager;" ) );
 	jobject WindowMetrics = pJNI->CallObjectMethod( WindowManager, pJNI->GetMethodID( pJNI->GetObjectClass( WindowManager ), "getMaximumWindowMetrics", "()Landroid/view/WindowMetrics;" ) );
 	jobject BoundsRect    = pJNI->CallObjectMethod( WindowMetrics, pJNI->GetMethodID( pJNI->GetObjectClass( WindowMetrics ), "getBounds", "()Landroid/graphics/Rect;" ) );
 	jclass  RectClass     = pJNI->GetObjectClass( BoundsRect );
@@ -497,7 +529,7 @@ xyDisplay xyGetDisplay( void )
 	jint    Right         = pJNI->GetIntField( BoundsRect, pJNI->GetFieldID( RectClass, "right", "I" ) );
 	jint    Bottom        = pJNI->GetIntField( BoundsRect, pJNI->GetFieldID( RectClass, "bottom", "I" ) );
 
-	pActivity->vm->DetachCurrentThread();
+	rContext.pPlatformImpl->pNativeActivity->vm->DetachCurrentThread();
 
 	return { .Width=static_cast< uint32_t >( Right - Left ), .Height=static_cast< uint32_t >( Bottom - Top ) };
 
@@ -522,19 +554,14 @@ xyTheme xyGetPreferredTheme( void )
 
 #elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
 
-	xyContext&       rContext       = xyGetContext();
-	ANativeActivity* pActivity      = static_cast< ANativeActivity* >( rContext.pPlatformHandle );
-	AConfiguration*  pConfiguration = AConfiguration_new();
-	AConfiguration_fromAssetManager( pConfiguration, pActivity->assetManager );
+	xyContext& rContext = xyGetContext();
 
-	switch( AConfiguration_getUiModeNight( pConfiguration ) )
+	switch( AConfiguration_getUiModeNight( rContext.pPlatformImpl->pConfiguration ) )
 	{
 		case ACONFIGURATION_UI_MODE_NIGHT_NO:  { Theme = xyTheme::Light; } break;
 		case ACONFIGURATION_UI_MODE_NIGHT_YES: { Theme = xyTheme::Dark;  } break;
 		default: break;
 	}
-
-	AConfiguration_delete( pConfiguration );
 
 #endif // XY_OS_ANDROID
 

@@ -42,9 +42,12 @@ extern int xyMain( void );
 
 INT WINAPI WinMain( _In_ HINSTANCE Instance, _In_opt_ HINSTANCE /*PrevInstance*/, _In_ LPSTR /*CmdLine*/, _In_ int /*ShowCmd*/ )
 {
-	xyContext& rContext = xyGetContext();
+	xyContext& rContext      = xyGetContext();
 	rContext.CommandLineArgs = std::span< char* >( __argv, __argc );
-	rContext.pPlatformHandle = Instance;
+	rContext.pPlatformImpl   = std::make_unique< xyPlatformImpl >();
+
+	// Store the handle to the application instance
+	rContext.pPlatformImpl->ApplicationInstanceHandle = Instance;
 
 	return xyMain();
 
@@ -58,16 +61,23 @@ INT WINAPI WinMain( _In_ HINSTANCE Instance, _In_opt_ HINSTANCE /*PrevInstance*/
 
 [[maybe_unused]] JNIEXPORT void ANativeActivity_onCreate( ANativeActivity* pActivity, void* /*pSavedState*/, size_t /*SavedStateSize*/ )
 {
-	xyContext& rContext = xyGetContext();
-	rContext.pPlatformHandle = pActivity;
+	xyContext& rContext    = xyGetContext();
+	rContext.pPlatformImpl = std::make_unique< xyPlatformImpl >();
+
+	// Store the activity data
+	rContext.pPlatformImpl->pNativeActivity = pActivity;
+
+	// Obtain the configuration
+	rContext.pPlatformImpl->pConfiguration = AConfiguration_new();
+	AConfiguration_fromAssetManager( rContext.pPlatformImpl->pConfiguration, rContext.pPlatformImpl->pNativeActivity->assetManager );
 
 	// Obtain the looper for the main thread
 	ALooper* pMainLooper = ALooper_forThread();
 	ALooper_acquire( pMainLooper );
 
 	// Listen for data on the main thread
-	pipe2( rContext.MainThreadPipe, O_NONBLOCK | O_CLOEXEC );
-	ALooper_addFd( pMainLooper, rContext.MainThreadPipe[ 0 ], 0, ALOOPER_EVENT_INPUT, []( int Read, int Events, void* pData ) -> int
+	pipe2( rContext.pPlatformImpl->JavaThreadPipe, O_NONBLOCK | O_CLOEXEC );
+	ALooper_addFd( pMainLooper, rContext.pPlatformImpl->JavaThreadPipe[ 0 ], 0, ALOOPER_EVENT_INPUT, []( int Read, int /*Events*/, void* /*pData*/ ) -> int
 	{
 		xyRunnable* pRunnable;
 		if( read( Read, &pRunnable, sizeof( pRunnable ) ) == sizeof( pRunnable ) )
