@@ -404,7 +404,9 @@ auto xyRunOnJavaThread( Function&& rrFunction, Args&&... rrArgs )
 
 #if defined( XY_OS_WINDOWS )
 #include <lmcons.h>
-#elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
+#elif defined( XY_OS_MACOS ) // XY_OS_WINDOWS
+#include <Cocoa/Cocoa.h>
+#elif defined( XY_OS_ANDROID ) // XY_OS_MACOS
 #include <android/configuration.h>
 #include <android/native_activity.h>
 #include <unistd.h>
@@ -431,7 +433,23 @@ void xyMessageBox( std::string_view Title, std::string_view Message )
 
 	MessageBoxA( NULL, Message.data(), Title.data(), MB_OK | MB_ICONINFORMATION | MB_TASKMODAL );
 
-#elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
+#elif defined( XY_OS_MACOS ) // XY_OS_WINDOWS
+
+	NSAlert*  pAlert           = [ [ NSAlert alloc ] init ];
+	NSString* pMessageText     = [ NSString stringWithUTF8String:Title.data() ];
+	NSString* pInformativeText = [ NSString stringWithUTF8String:Message.data() ];
+
+	[ pAlert addButtonWithTitle:@"OK" ];
+	[ pAlert setMessageText:pMessageText ];
+	[ pAlert setInformativeText:pInformativeText ];
+	[ pAlert setAlertStyle:NSAlertStyleInformational ];
+	[ pAlert runModal ];
+
+	[ pInformativeText release ];
+	[ pMessageText release ];
+	[ pAlert release ];
+
+#elif defined( XY_OS_ANDROID ) // XY_OS_MACOS
 
 	jobject Alert = xyRunOnJavaThread( []( std::string Title, std::string Message )
 	{
