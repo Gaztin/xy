@@ -40,16 +40,16 @@
 
 #include <TargetConditionals.h>
 
-#if defined( TARGET_OS_OSX )
+#if TARGET_OS_OSX
 	#define XY_OS_MACOS
 	#define XY_ENV_DESKTOP
-#elif defined( TARGET_OS_IOS ) // TARGET_OS_OSX
+#elif TARGET_OS_IOS // TARGET_OS_OSX
 	#define XY_OS_IOS
 	#define XY_ENV_PHONE
-#elif defined( TARGET_OS_WATCH ) // TARGET_OS_IOS
+#elif TARGET_OS_WATCH // TARGET_OS_IOS
 	#define XY_OS_WATCHOS
 	#define XY_ENV_WATCH
-#elif defined( TARGET_OS_TV ) // TARGET_OS_WATCH
+#elif TARGET_OS_TV // TARGET_OS_WATCH
 	#define XY_OS_TVOS
 	#define XY_ENV_TV
 #endif // TARGET_OS_TV
@@ -246,7 +246,17 @@ struct xyPlatformImpl
 }; // xyPlatformImpl
 
 
-#elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
+#elif defined( XY_OS_MACOS ) // XY_OS_WINDOWS
+
+//////////////////////////////////////////////////////////////////////////
+/// macOS-specific data structures
+
+struct xyPlatformImpl
+{
+}; // xyPlatformImpl
+
+
+#elif defined( XY_OS_ANDROID ) // XY_OS_MACOS
 
 //////////////////////////////////////////////////////////////////////////
 /// Android-specific includes
