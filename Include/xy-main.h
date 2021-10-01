@@ -95,7 +95,39 @@ INT WINAPI WinMain( _In_ HINSTANCE Instance, _In_opt_ HINSTANCE /*PrevInstance*/
 
 } // ANativeActivity_onCreate
 
-#else // XY_OS_ANDROID
+#elif defined( XY_OS_IOS ) // XY_OS_ANDROID
+
+#include <thread>
+
+#include <UIKit/UIKit.h>
+
+@interface xyAppDelegate : NSObject< UIApplicationDelegate >
+@end // xyAppDelegate
+
+@implementation xyAppDelegate
+
+-( BOOL )application:( UIApplication* )application didFinishLaunchingWithOptions:( NSDictionary* )launchOptions
+{
+	std::thread Thread( &xyMain );
+	Thread.detach();
+
+} // didFinishLaunchingWithOptions
+
+@end // xyAppDelegate
+
+int main( int ArgC, char** ppArgV )
+{
+	xyContext& rContext = xyGetContext();
+	rContext.CommandLineArgs = std::span< char* >( ppArgV, ArgC );
+
+	@autoreleasepool
+	{
+		return UIApplicationMain( ArgC, ppArgV, nil, NSStringFromClass( [ xyAppDelegate class ] ) );
+	}
+
+} // main
+
+#else // XY_OS_IOS
 
 int main( int ArgC, char** ppArgV )
 {
@@ -106,4 +138,4 @@ int main( int ArgC, char** ppArgV )
 
 } // main
 
-#endif // !XY_OS_WINDOWS && !XY_OS_ANDROID
+#endif // !XY_OS_WINDOWS && !XY_OS_ANDROID && !XY_OS_IOS

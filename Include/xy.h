@@ -394,7 +394,18 @@ auto xyRunOnJavaThread( Function&& rrFunction, Args&&... rrArgs )
 } // xyRunOnJavaThread
 
 
-#endif // XY_OS_ANDROID
+#elif defined( XY_OS_IOS ) // XY_OS_ANDROID
+
+//////////////////////////////////////////////////////////////////////////
+/// iOS-specific data structures
+
+struct xyPlatformImpl
+{
+
+}; // xyPlatformImpl
+
+
+#endif // XY_OS_IOS
 
 
 #if defined( XY_IMPLEMENT )
