@@ -24,6 +24,7 @@
 #include <span>
 #include <string>
 #include <string_view>
+#include <thread>
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -421,7 +422,9 @@ struct xyPlatformImpl
 #include <android/configuration.h>
 #include <android/native_activity.h>
 #include <unistd.h>
-#endif // XY_OS_ANDROID
+#elif defined( XY_OS_IOS ) // XY_OS_ANDROID
+#include <UIKit/UIKit.h>
+#endif // XY_OS_IOS
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -510,7 +513,29 @@ void xyMessageBox( std::string_view Title, std::string_view Message )
 
 	rContext.pPlatformImpl->pNativeActivity->vm->DetachCurrentThread();
 
-#endif // XY_OS_ANDROID
+#elif defined( XY_OS_IOS ) // XY_OS_ANDROID
+	
+	__block bool Presented = true;
+
+	dispatch_async_and_wait( dispatch_get_main_queue(), ^
+	{
+		UIApplication*     pApplication     = [ UIApplication sharedApplication ];
+		UIScene*           pScene           = [ [ [ pApplication connectedScenes ] allObjects ] firstObject ];
+		UIViewController*  pViewController  = [ [ [ ( UIWindowScene* )pScene windows ] firstObject ] rootViewController ];
+		NSString*          pTitle           = [ NSString stringWithUTF8String:Title.data() ];
+		NSString*          pMessage         = [ NSString stringWithUTF8String:Message.data() ];
+		UIAlertController* pAlertController = [ UIAlertController alertControllerWithTitle:pTitle message:pMessage preferredStyle:UIAlertControllerStyleAlert ];
+		UIAlertAction*     pActionOK        = [ UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Presented = false; } ];
+
+		[ pAlertController addAction:pActionOK ];
+		[ pViewController presentViewController:pAlertController animated:NO completion:^{ } ];
+	} );
+
+	// Sleep until dialog is closed
+	while( Presented )
+		std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+	
+#endif // XY_OS_IOS
 
 } // xyMessageBox
 
@@ -551,7 +576,13 @@ xyDevice xyGetDevice( void )
 
 	return { .Name=std::move( DeviceName ) };
 
-#endif // XY_OS_ANDROID
+#elif defined( XY_OS_IOS ) // XY_OS_ANDROID
+
+	NSString* pDeviceName = [ [ UIDevice currentDevice ] name ];
+
+	return { .Name=[ pDeviceName UTF8String ] };
+
+#endif // XY_OS_IOS
 
 } // xyGetDevice
 
@@ -583,9 +614,17 @@ xyDisplay xyGetDisplay( void )
 
 	rContext.pPlatformImpl->pNativeActivity->vm->DetachCurrentThread();
 
-	return { .Width=static_cast< uint32_t >( Right - Left ), .Height=static_cast< uint32_t >( Bottom - Top ) };
+	return { .Width  = static_cast< uint32_t >( Right - Left )
+	       , .Height = static_cast< uint32_t >( Bottom - Top ) };
 
-#endif // XY_OS_ANDROID
+#elif defined( XY_OS_IOS ) // XY_OS_ANDROID
+
+	CGRect ScreenRect = [ [ UIScreen mainScreen ] bounds ];
+
+	return { .Width  = ScreenRect.size.width
+	       , .Height = ScreenRect.size.height };
+
+#endif // XY_OS_IOS
 
 } // xyGetDisplay
 
@@ -615,7 +654,18 @@ xyTheme xyGetPreferredTheme( void )
 		default: break;
 	}
 
-#endif // XY_OS_ANDROID
+#elif defined( XY_OS_IOS ) // XY_OS_ANDROID
+
+	UITraitCollection* pTraitCollection = [ UITraitCollection currentTraitCollection ];
+	
+	switch( [ pTraitCollection userInterfaceStyle ] )
+	{
+		case UIUserInterfaceStyleLight: { Theme = xyTheme::Light; } break;
+		case UIUserInterfaceStyleDark:  { Theme = xyTheme::Dark;  } break;
+		default: break;
+	}
+
+#endif // XY_OS_IOS
 
 	return Theme;
 
@@ -646,7 +696,13 @@ xyLanguage xyGetLanguage( void )
 
 	return { .LocaleName=std::string( LanguageCode, 2 ) };
 
-#endif // XY_OS_ANDROID
+#elif defined( XY_OS_IOS ) // XY_OS_ANDROID
+
+	NSString* pLanguage = [ [ NSLocale preferredLanguages ] firstObject ];
+
+	return { .LocaleName=[ pLanguage UTF8String ] };
+
+#endif // XY_OS_IOS
 
 } // xyGetLanguage
 

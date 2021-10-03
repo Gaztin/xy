@@ -101,13 +101,25 @@ INT WINAPI WinMain( _In_ HINSTANCE Instance, _In_opt_ HINSTANCE /*PrevInstance*/
 
 #include <UIKit/UIKit.h>
 
+@interface xyViewController : UIViewController
+@end // xyViewController
+
 @interface xyAppDelegate : NSObject< UIApplicationDelegate >
 @end // xyAppDelegate
 
+@implementation xyViewController
+@end // xyViewController
+
 @implementation xyAppDelegate
 
--( BOOL )application:( UIApplication* )application didFinishLaunchingWithOptions:( NSDictionary* )launchOptions
+-( BOOL )application:( UIApplication* )pApplication didFinishLaunchingWithOptions:( NSDictionary* )pLaunchOptions
 {
+	UIScene*          pScene          = [ [ [ pApplication connectedScenes ] allObjects ] firstObject ];
+	UIWindow*         pWindow         = [ [ UIWindow alloc ] initWithWindowScene:( UIWindowScene* )pScene ];
+	xyViewController* pViewController = [ [ xyViewController alloc ] init ];
+	pWindow.rootViewController        = pViewController;
+	[ pWindow makeKeyAndVisible ];
+
 	std::thread Thread( &xyMain );
 	Thread.detach();
 
