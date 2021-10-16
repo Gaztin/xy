@@ -25,6 +25,7 @@
 #include <string>
 #include <string_view>
 #include <thread>
+#include <vector>
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -108,6 +109,14 @@ struct xyDevice
 
 }; // xyDevice
 
+struct xyDisplayAdapter
+{
+	std::string Name;
+	xyRect      FullRect;
+	xyRect      WorkRect;
+
+}; // xyDisplayAdapter
+
 struct xyLanguage
 {
 	std::string LocaleName;
@@ -154,3 +163,10 @@ extern xyTheme xyGetPreferredTheme( void );
  * @return The language code.
  */
 extern xyLanguage xyGetLanguage( void );
+
+/**
+ * Obtains the display adapters connected to the device.
+ *
+ * @return A vector of display adapters.
+ */
+extern std::vector< xyDisplayAdapter > xyGetDisplayAdapters( void );

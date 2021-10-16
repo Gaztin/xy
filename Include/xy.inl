@@ -270,3 +270,107 @@ xyLanguage xyGetLanguage( void )
 #endif // XY_OS_IOS
 
 } // xyGetLanguage
+
+//////////////////////////////////////////////////////////////////////////
+
+std::vector< xyDisplayAdapter > xyGetDisplayAdapters( void )
+{
+	std::vector< xyDisplayAdapter > DisplayAdapters;
+
+#if defined( XY_OS_WINDOWS )
+
+	auto EnumProc = []( HMONITOR MonitorHandle, HDC /*DeviceContextHandle*/, LPRECT /*pRect*/, LPARAM UserData ) -> BOOL
+	{
+		auto& rMonitors = *reinterpret_cast< std::vector< xyDisplayAdapter >* >( UserData );
+
+		MONITORINFOEXA Info = { sizeof( MONITORINFOEXA ) };
+		if( GetMonitorInfoA( MonitorHandle, &Info ) )
+		{
+			xyDisplayAdapter Adapter = { .Name     = Info.szDevice,
+			                             .FullRect = { .Left=Info.rcMonitor.left, .Top=Info.rcMonitor.top, .Right=Info.rcMonitor.right, .Bottom=Info.rcMonitor.bottom },
+			                             .WorkRect = { .Left=Info.rcWork   .left, .Top=Info.rcWork   .top, .Right=Info.rcWork   .right, .Bottom=Info.rcWork   .bottom } };
+
+			DISPLAY_DEVICEA DisplayDevice = { .cb=sizeof( DISPLAY_DEVICEA ) };
+			if( EnumDisplayDevicesA( Adapter.Name.c_str(), 0, &DisplayDevice, 0 ) )
+				Adapter.Name = DisplayDevice.DeviceString;
+
+			rMonitors.emplace_back( std::move( Adapter ) );
+		}
+
+		// Always continue
+		return TRUE;
+	};
+
+	EnumDisplayMonitors( NULL, NULL, EnumProc, reinterpret_cast< LPARAM >( &DisplayAdapters ) );
+
+#elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
+
+	xyContext& rContext = xyGetContext();
+	JNIEnv*    pJNI;
+	rContext.pPlatformImpl->pNativeActivity->vm->AttachCurrentThread( &pJNI, nullptr );
+
+	jobject      Activity       = rContext.pPlatformImpl->pNativeActivity->clazz;
+	jclass       ActivityClass  = pJNI->GetObjectClass( Activity );
+	jstring      DisplayService = ( jstring )pJNI->GetStaticStringField( ActivityClass, "DISPLAY_SERVICE", "Ljava/lang/String;" );
+	jobject      DisplayManager = pJNI->CallObjectMethod( Activity, pJNI->GetMethodID( ActivityClass, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;" ), DisplayService );
+	jobjectArray Displays       = ( jobjectArray )pJNI->CallObjectMethod( DisplayManager, pJNI->GetMethodID( pJNI->GetObjectClass( DisplayManager ), "getDisplays", "()[Landroid/view/Display;" ) );
+	jsize        DisplayCount   = pJNI->GetArrayLength( Displays );
+
+	for( jsize i = 0; i < DisplayCount; ++i )
+	{
+		jobject      Display       = pJNI->GetObjectArrayElement( Displays, i );
+		jclass       DisplayClass  = pJNI->GetObjectClass( Display );
+		jstring      Name          = ( jstring )pJNI->CallObjectMethod( Display, pJNI->GetMethodID( DisplayClass, "getName", "()Ljava/lang/String;" ) );
+		const jchar* pNameChars    = pJNI->GetStringChars( Name, nullptr );
+		jclass       RectClass     = pJNI->FindClass( "Landroid/graphics/Rect;" );
+		jobject      Bounds        = pJNI->AllocObject( RectClass );
+
+		xyDisplayAdapter Adapter = { .Name = pNameChars };
+
+		// NOTE: "getRectSize" is deprecated as of SDK v30.
+		// The documentation suggests using WindowMetric#getBounds(), but there seems to be no way of obtaining the bounds of a specific Display object.
+		pJNI->CallVoidMethod( Display, pJNI->GetMethodID( DisplayClass, "getRectSize", "(Landroid/graphics/Rect;)V" ), Bounds );
+		Adapter.FullRect.Left   = pJNI->GetIntField( Bounds, pJNI->GetFieldID( RectClass, "left",   "I" ) );
+		Adapter.FullRect.Top    = pJNI->GetIntField( Bounds, pJNI->GetFieldID( RectClass, "top",    "I" ) );
+		Adapter.FullRect.Right  = pJNI->GetIntField( Bounds, pJNI->GetFieldID( RectClass, "right",  "I" ) );
+		Adapter.FullRect.Bottom = pJNI->GetIntField( Bounds, pJNI->GetFieldID( RectClass, "bottom", "I" ) );
+
+		if( jobject DisplayCutout = pJNI->CallObjectMethod( Display, pJNI->GetMethodID( DisplayClass, "getCutout", "()Landroid/view/DisplayCutout;" ) ) )
+		{
+			jclass DisplayCutoutClass = pJNI->GetObjectClass( DisplayCutout );
+
+			Adapter.WorkRect.Left   = pJNI->CallIntMethod( DisplayCount, pJNI->GetMethodID( DisplayCutoutClass, "getSafeInsetLeft",   "()I" ) );
+			Adapter.WorkRect.Top    = pJNI->CallIntMethod( DisplayCount, pJNI->GetMethodID( DisplayCutoutClass, "getSafeInsetTop",    "()I" ) );
+			Adapter.WorkRect.Right  = pJNI->CallIntMethod( DisplayCount, pJNI->GetMethodID( DisplayCutoutClass, "getSafeInsetRight",  "()I" ) );
+			Adapter.WorkRect.Bottom = pJNI->CallIntMethod( DisplayCount, pJNI->GetMethodID( DisplayCutoutClass, "getSafeInsetBottom", "()I" ) );
+		}
+		else
+		{
+			// Work rect is entire display if there was no display cutout
+			Adapter.WorkRect = Adapter.FullRect;
+		}
+
+		DisplayAdapters.emplace_back( std::move( MainDisplay ) );
+
+		pJNI->ReleaseStringChars( Name, pNameChars );
+	}
+
+	rContext.pPlatformImpl->pNativeActivity->vm->DetachCurrentThread();
+
+#elif defined( XY_OS_IOS ) // XY_OS_ANDROID
+
+	for( UIScreen* pScreen in [ UIScreen screens ] )
+	{
+		NSString*        pScreenName = [ pScreen debugDescription ];
+		CGRect           Bounds      = [ pScreen bounds ];
+		xyDisplayAdapter MainDisplay = { .Name       = [ pScreenName UTF8String ],
+		                                 .FullRect   = { .Left=CGRectGetMinX( Bounds ), .Top=CGRectGetMinY( Bounds ), .Right=CGRectGetMaxX( Bounds ), .Bottom=CGRectGetMaxY( Bounds ) } };
+
+		DisplayAdapters.emplace_back( std::move( MainDisplay ) );
+	}
+
+#endif // XY_OS_IOS
+
+	return DisplayAdapters;
+
+} // xyGetDisplayAdapters
