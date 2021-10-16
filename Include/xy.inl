@@ -311,21 +311,21 @@ std::vector< xyDisplayAdapter > xyGetDisplayAdapters( void )
 
 	jobject      Activity       = rContext.pPlatformImpl->pNativeActivity->clazz;
 	jclass       ActivityClass  = pJNI->GetObjectClass( Activity );
-	jstring      DisplayService = ( jstring )pJNI->GetStaticStringField( ActivityClass, "DISPLAY_SERVICE", "Ljava/lang/String;" );
+	jstring      DisplayService = ( jstring )pJNI->GetStaticObjectField( ActivityClass, pJNI->GetFieldID( ActivityClass, "DISPLAY_SERVICE", "Ljava/lang/String;" ) );
 	jobject      DisplayManager = pJNI->CallObjectMethod( Activity, pJNI->GetMethodID( ActivityClass, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;" ), DisplayService );
 	jobjectArray Displays       = ( jobjectArray )pJNI->CallObjectMethod( DisplayManager, pJNI->GetMethodID( pJNI->GetObjectClass( DisplayManager ), "getDisplays", "()[Landroid/view/Display;" ) );
 	jsize        DisplayCount   = pJNI->GetArrayLength( Displays );
 
 	for( jsize i = 0; i < DisplayCount; ++i )
 	{
-		jobject      Display       = pJNI->GetObjectArrayElement( Displays, i );
-		jclass       DisplayClass  = pJNI->GetObjectClass( Display );
-		jstring      Name          = ( jstring )pJNI->CallObjectMethod( Display, pJNI->GetMethodID( DisplayClass, "getName", "()Ljava/lang/String;" ) );
-		const jchar* pNameChars    = pJNI->GetStringChars( Name, nullptr );
-		jclass       RectClass     = pJNI->FindClass( "Landroid/graphics/Rect;" );
-		jobject      Bounds        = pJNI->AllocObject( RectClass );
+		jobject     Display      = pJNI->GetObjectArrayElement( Displays, i );
+		jclass      DisplayClass = pJNI->GetObjectClass( Display );
+		jstring     Name         = ( jstring )pJNI->CallObjectMethod( Display, pJNI->GetMethodID( DisplayClass, "getName", "()Ljava/lang/String;" ) );
+		const char* pNameUTF     = pJNI->GetStringUTFChars( Name, nullptr );
+		jclass      RectClass    = pJNI->FindClass( "android/graphics/Rect" );
+		jobject     Bounds       = pJNI->AllocObject( RectClass );
 
-		xyDisplayAdapter Adapter = { .Name = pNameChars };
+		xyDisplayAdapter Adapter = { .Name=pNameUTF };
 
 		// NOTE: "getRectSize" is deprecated as of SDK v30.
 		// The documentation suggests using WindowMetric#getBounds(), but there seems to be no way of obtaining the bounds of a specific Display object.
@@ -339,10 +339,10 @@ std::vector< xyDisplayAdapter > xyGetDisplayAdapters( void )
 		{
 			jclass DisplayCutoutClass = pJNI->GetObjectClass( DisplayCutout );
 
-			Adapter.WorkRect.Left   = pJNI->CallIntMethod( DisplayCount, pJNI->GetMethodID( DisplayCutoutClass, "getSafeInsetLeft",   "()I" ) );
-			Adapter.WorkRect.Top    = pJNI->CallIntMethod( DisplayCount, pJNI->GetMethodID( DisplayCutoutClass, "getSafeInsetTop",    "()I" ) );
-			Adapter.WorkRect.Right  = pJNI->CallIntMethod( DisplayCount, pJNI->GetMethodID( DisplayCutoutClass, "getSafeInsetRight",  "()I" ) );
-			Adapter.WorkRect.Bottom = pJNI->CallIntMethod( DisplayCount, pJNI->GetMethodID( DisplayCutoutClass, "getSafeInsetBottom", "()I" ) );
+			Adapter.WorkRect.Left   = pJNI->CallIntMethod( DisplayCutout, pJNI->GetMethodID( DisplayCutoutClass, "getSafeInsetLeft",   "()I" ) );
+			Adapter.WorkRect.Top    = pJNI->CallIntMethod( DisplayCutout, pJNI->GetMethodID( DisplayCutoutClass, "getSafeInsetTop",    "()I" ) );
+			Adapter.WorkRect.Right  = pJNI->CallIntMethod( DisplayCutout, pJNI->GetMethodID( DisplayCutoutClass, "getSafeInsetRight",  "()I" ) );
+			Adapter.WorkRect.Bottom = pJNI->CallIntMethod( DisplayCutout, pJNI->GetMethodID( DisplayCutoutClass, "getSafeInsetBottom", "()I" ) );
 		}
 		else
 		{
@@ -350,9 +350,9 @@ std::vector< xyDisplayAdapter > xyGetDisplayAdapters( void )
 			Adapter.WorkRect = Adapter.FullRect;
 		}
 
-		DisplayAdapters.emplace_back( std::move( MainDisplay ) );
+		DisplayAdapters.emplace_back( std::move( Adapter ) );
 
-		pJNI->ReleaseStringChars( Name, pNameChars );
+		pJNI->ReleaseStringUTFChars( Name, pNameUTF );
 	}
 
 	rContext.pPlatformImpl->pNativeActivity->vm->DetachCurrentThread();
