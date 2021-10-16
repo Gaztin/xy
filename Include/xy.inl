@@ -195,48 +195,6 @@ xyDevice xyGetDevice( void )
 
 //////////////////////////////////////////////////////////////////////////
 
-xyDisplay xyGetDisplay( void )
-{
-
-#if defined( XY_OS_WINDOWS )
-
-	return { .Width  = static_cast< uint32_t >( GetSystemMetrics( SM_CXVIRTUALSCREEN ) ),
-	         .Height = static_cast< uint32_t >( GetSystemMetrics( SM_CYVIRTUALSCREEN ) ) };
-
-#elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
-
-	xyContext& rContext = xyGetContext();
-	JNIEnv*    pJNI;
-	rContext.pPlatformImpl->pNativeActivity->vm->AttachCurrentThread( &pJNI, nullptr );
-
-	jobject Activity      = rContext.pPlatformImpl->pNativeActivity->clazz;
-	jobject WindowManager = pJNI->CallObjectMethod( Activity, pJNI->GetMethodID( pJNI->GetObjectClass( Activity ), "getWindowManager", "()Landroid/view/WindowManager;" ) );
-	jobject WindowMetrics = pJNI->CallObjectMethod( WindowManager, pJNI->GetMethodID( pJNI->GetObjectClass( WindowManager ), "getMaximumWindowMetrics", "()Landroid/view/WindowMetrics;" ) );
-	jobject BoundsRect    = pJNI->CallObjectMethod( WindowMetrics, pJNI->GetMethodID( pJNI->GetObjectClass( WindowMetrics ), "getBounds", "()Landroid/graphics/Rect;" ) );
-	jclass  RectClass     = pJNI->GetObjectClass( BoundsRect );
-	jint    Left          = pJNI->GetIntField( BoundsRect, pJNI->GetFieldID( RectClass, "left", "I" ) );
-	jint    Top           = pJNI->GetIntField( BoundsRect, pJNI->GetFieldID( RectClass, "top", "I" ) );
-	jint    Right         = pJNI->GetIntField( BoundsRect, pJNI->GetFieldID( RectClass, "right", "I" ) );
-	jint    Bottom        = pJNI->GetIntField( BoundsRect, pJNI->GetFieldID( RectClass, "bottom", "I" ) );
-
-	rContext.pPlatformImpl->pNativeActivity->vm->DetachCurrentThread();
-
-	return { .Width  = static_cast< uint32_t >( Right - Left )
-	       , .Height = static_cast< uint32_t >( Bottom - Top ) };
-
-#elif defined( XY_OS_IOS ) // XY_OS_ANDROID
-
-	CGRect ScreenRect = [ [ UIScreen mainScreen ] bounds ];
-
-	return { .Width  = ScreenRect.size.width
-	       , .Height = ScreenRect.size.height };
-
-#endif // XY_OS_IOS
-
-} // xyGetDisplay
-
-//////////////////////////////////////////////////////////////////////////
-
 xyTheme xyGetPreferredTheme( void )
 {
 	// Default to light theme

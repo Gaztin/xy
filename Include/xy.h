@@ -108,13 +108,6 @@ struct xyDevice
 
 }; // xyDevice
 
-struct xyDisplay
-{
-	uint32_t Width  = 0;
-	uint32_t Height = 0;
-
-}; // xyDisplay
-
 struct xyLanguage
 {
 	std::string LocaleName;
@@ -147,15 +140,6 @@ extern void xyMessageBox( std::string_view Title, std::string_view Message );
  * @return The device data.
  */
 extern xyDevice xyGetDevice( void );
-
-/**
- * Obtains the display of this device.
- * In desktop environments, this is the virtual screen. The virtual screen is the collection of all monitors.
- * To obtain individual desktop monitors, refer to xyGetPrimaryDesktopMonitor or xyGetAllDesktopMonitors.
- *
- * @return The display data.
- */
-extern xyDisplay xyGetDisplay( void );
 
 /**
  * Obtains the preferred theme of this device.
