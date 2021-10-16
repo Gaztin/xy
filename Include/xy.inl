@@ -121,7 +121,7 @@ void xyMessageBox( std::string_view Title, std::string_view Message )
 	rContext.pPlatformImpl->pNativeActivity->vm->DetachCurrentThread();
 
 #elif defined( XY_OS_IOS ) // XY_OS_ANDROID
-	
+
 	__block bool Presented = true;
 
 	dispatch_async_and_wait( dispatch_get_main_queue(), ^
@@ -141,7 +141,7 @@ void xyMessageBox( std::string_view Title, std::string_view Message )
 	// Sleep until dialog is closed
 	while( Presented )
 		std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
-	
+
 #endif // XY_OS_IOS
 
 } // xyMessageBox
@@ -222,7 +222,7 @@ xyTheme xyGetPreferredTheme( void )
 #elif defined( XY_OS_IOS ) // XY_OS_ANDROID
 
 	UITraitCollection* pTraitCollection = [ UITraitCollection currentTraitCollection ];
-	
+
 	switch( [ pTraitCollection userInterfaceStyle ] )
 	{
 		case UIUserInterfaceStyleLight: { Theme = xyTheme::Light; } break;
