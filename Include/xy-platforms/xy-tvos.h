@@ -15,12 +15,19 @@
  * 3. This notice may not be removed or altered from any source distribution.
  */
 
-#define XY_IMPLEMENT
-#include "xy-platforms/xy-android.h"
-#include "xy-platforms/xy-ios.h"
-#include "xy-platforms/xy-macos.h"
-#include "xy-platforms/xy-tvos.h"
-#include "xy-platforms/xy-watchos.h"
-#include "xy-platforms/xy-windows.h"
-#include "xy.inl"
-#include "xy-desktop.inl"
+#pragma once
+
+#include "../xy.h"
+
+#if defined( XY_OS_TVOS )
+
+//////////////////////////////////////////////////////////////////////////
+/// tvOS-specific data structures
+
+struct xyPlatformImpl
+{
+
+}; // xyPlatformImpl
+
+
+#endif // XY_OS_TVOS
