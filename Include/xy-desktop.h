@@ -28,14 +28,6 @@
 //////////////////////////////////////////////////////////////////////////
 /// Desktop-specific data structures
 
-struct xyMonitor
-{
-	std::string Name;
-	xyRect      FullRect;
-	xyRect      WorkRect;
-
-}; // xyMonitor
-
 struct xyMouse
 {
 	operator bool( void ) const { return Active; } // Allows `if(auto m = xyGetMouse()) {...}`
@@ -56,20 +48,6 @@ struct xyMouse
  * @return The mouse data.
  */
 extern xyMouse xyGetMouse( void );
-
-/*
- * Obtain the primary monitor for this desktop device.
- *
- * @return The monitor data.
- */
-extern xyMonitor xyGetPrimaryDesktopMonitor( void );
-
-/*
- * Gather a list of all desktop monitors for this desktop device.
- *
- * @return A vector of monitor data.
- */
-extern std::vector< xyMonitor > xyGetAllDesktopMonitors( void );
 
 
 #endif // XY_ENV_DESKTOP
