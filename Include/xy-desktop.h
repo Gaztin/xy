@@ -17,7 +17,7 @@
 
 #include "xy.h"
 
-#if defined( XY_ENV_DESKTOP )
+#if XY_UI_MODES & XY_UI_MODE_DESKTOP
 
 //////////////////////////////////////////////////////////////////////////
 /// Desktop-specific includes
@@ -50,4 +50,4 @@ struct xyMouse
 extern xyMouse xyGetMouse( void );
 
 
-#endif // XY_ENV_DESKTOP
+#endif // XY_UI_MODES & XY_UI_MODE_DESKTOP

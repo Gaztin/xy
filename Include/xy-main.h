@@ -48,6 +48,7 @@ INT WINAPI WinMain( _In_ HINSTANCE Instance, _In_opt_ HINSTANCE /*PrevInstance*/
 	xyContext& rContext      = xyGetContext();
 	rContext.CommandLineArgs = std::span< char* >( __argv, __argc );
 	rContext.pPlatformImpl   = std::make_unique< xyPlatformImpl >();
+	rContext.UIMode          = XY_UI_MODE_DESKTOP;
 
 	// Store the handle to the application instance
 	rContext.pPlatformImpl->ApplicationInstanceHandle = Instance;
@@ -73,6 +74,18 @@ INT WINAPI WinMain( _In_ HINSTANCE Instance, _In_opt_ HINSTANCE /*PrevInstance*/
 	// Obtain the configuration
 	rContext.pPlatformImpl->pConfiguration = AConfiguration_new();
 	AConfiguration_fromAssetManager( rContext.pPlatformImpl->pConfiguration, rContext.pPlatformImpl->pNativeActivity->assetManager );
+
+	// Obtain the UI mode
+	switch( AConfiguration_getUiModeType( rContext.pPlatformImpl->pConfiguration ) )
+	{
+		case ACONFIGURATION_UI_MODE_TYPE_DESK:       { rContext.UIMode = XY_UI_MODE_DESKTOP;  } break;
+		case ACONFIGURATION_UI_MODE_TYPE_CAR:        { rContext.UIMode = XY_UI_MODE_CAR;      } break;
+		case ACONFIGURATION_UI_MODE_TYPE_TELEVISION: { rContext.UIMode = XY_UI_MODE_TV;       } break;
+		case ACONFIGURATION_UI_MODE_TYPE_APPLIANCE:  { rContext.UIMode = XY_UI_MODE_HEADLESS; } break;
+		case ACONFIGURATION_UI_MODE_TYPE_WATCH:      { rContext.UIMode = XY_UI_MODE_WATCH;    } break;
+		case ACONFIGURATION_UI_MODE_TYPE_VR_HEADSET: { rContext.UIMode = XY_UI_MODE_VR;       } break;
+		default:                                     { rContext.UIMode = XY_UI_MODE_PHONE;    } break; // Default to phone UI
+	}
 
 	// Obtain the looper for the main thread
 	ALooper* pMainLooper = ALooper_forThread();
@@ -134,6 +147,7 @@ int main( int ArgC, char** ppArgV )
 {
 	xyContext& rContext = xyGetContext();
 	rContext.CommandLineArgs = std::span< char* >( ppArgV, ArgC );
+	rContext.UIMode          = XY_UI_MODE_PHONE;
 
 	@autoreleasepool
 	{
@@ -148,6 +162,7 @@ int main( int ArgC, char** ppArgV )
 {
 	xyContext& rContext = xyGetContext();
 	rContext.CommandLineArgs = std::span< char* >( ppArgV, ArgC );
+	rContext.UIMode          = XY_UI_MODE_HEADLESS; // We don't know the UI mode. Might as well assume the worst.
 
 	return xyMain();
 

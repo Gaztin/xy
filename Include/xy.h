@@ -31,11 +31,19 @@
 //////////////////////////////////////////////////////////////////////////
 /// Pre-processor defines
 
+#define XY_UI_MODE_DESKTOP  0x01
+#define XY_UI_MODE_PHONE    0x02
+#define XY_UI_MODE_WATCH    0x04
+#define XY_UI_MODE_TV       0x08
+#define XY_UI_MODE_VR       0x10
+#define XY_UI_MODE_CAR      0x20
+#define XY_UI_MODE_HEADLESS 0x40
+
 #if defined( _WIN32 )
 /// Windows
 
 #define XY_OS_WINDOWS
-#define XY_ENV_DESKTOP
+#define XY_UI_MODES ( XY_UI_MODE_DESKTOP )
 
 #elif defined( __APPLE__ ) // _WIN32
 /// Apple
@@ -44,29 +52,32 @@
 
 #if TARGET_OS_OSX
 	#define XY_OS_MACOS
-	#define XY_ENV_DESKTOP
+	#define XY_UI_MODES ( XY_UI_MODE_DESKTOP )
 #elif TARGET_OS_IOS // TARGET_OS_OSX
 	#define XY_OS_IOS
-	#define XY_ENV_PHONE
+	#define XY_UI_MODES ( XY_UI_MODE_PHONE )
 #elif TARGET_OS_WATCH // TARGET_OS_IOS
 	#define XY_OS_WATCHOS
-	#define XY_ENV_WATCH
+	#define XY_UI_MODES ( XY_UI_MODE_WATCH )
 #elif TARGET_OS_TV // TARGET_OS_WATCH
 	#define XY_OS_TVOS
-	#define XY_ENV_TV
+	#define XY_UI_MODES ( XY_UI_MODE_TV )
 #endif // TARGET_OS_TV
 
 #elif defined( __ANDROID__ ) // __APPLE__
 /// Android
 
 #define XY_OS_ANDROID
-#define XY_ENV_PHONE
+// Since there is no way to detect at compile time what UI mode we are targeting, we have to define all possible environments
+// List of UI modes can be found at https://developer.android.google.cn/guide/topics/resources/providing-resources.html#UiModeQualifier
+// (Desk Dock and Appliance corresponds to Desktop and Headless, respectively)
+#define XY_UI_MODES ( XY_UI_MODE_DESKTOP | XY_UI_MODE_PHONE | XY_UI_MODE_WATCH | XY_UI_MODE_TV | XY_UI_MODE_VR | XY_UI_MODE_CAR | XY_UI_MODE_HEADLESS )
 
 #elif defined( __linux__ ) // __ANDROID__
 /// Linux
 
 #define XY_OS_LINUX
-#define XY_ENV_DESKTOP
+#define XY_UI_MODES ( XY_UI_MODE_DESKTOP | XY_UI_MODE_HEADLESS )
 
 #endif // __linux__
 
@@ -91,6 +102,7 @@ struct xyContext
 {
 	std::span< char* >                CommandLineArgs;
 	std::unique_ptr< xyPlatformImpl > pPlatformImpl;
+	uint32_t                          UIMode = 0x0;
 
 }; // xyContext
 
