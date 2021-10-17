@@ -162,7 +162,13 @@ xyDevice xyGetDevice( void )
 
 	return { };
 
-#elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
+#elif defined( XY_OS_MACOS ) // XY_OS_WINDOWS
+
+	NSString* pName = [ [ NSHost currentHost ] name ];
+
+	return { .Name=[ pName UTF8String ] };
+
+#elif defined( XY_OS_ANDROID ) // XY_OS_MACOS
 
 	xyContext& rContext = xyGetContext();
 	JNIEnv*    pJNI;
@@ -202,13 +208,18 @@ xyTheme xyGetPreferredTheme( void )
 
 #if defined( XY_OS_WINDOWS )
 
-	// Courtesy of https://stackoverflow.com/a/51336913
 	DWORD AppsUseLightTheme;
 	DWORD DataSize = sizeof( AppsUseLightTheme );
 	if( RegGetValueA( HKEY_CURRENT_USER, "Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize", "AppsUseLightTheme", RRF_RT_REG_DWORD, NULL, &AppsUseLightTheme, &DataSize ) == ERROR_SUCCESS )
 		Theme = AppsUseLightTheme ? xyTheme::Light : xyTheme::Dark;
 
-#elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
+#elif defined( XY_OS_MACOS ) // XY_OS_WINDOWS
+
+	NSString* pStyle = [ [ NSUserDefaults standardUserDefaults ] stringForKey:@"AppleInterfaceStyle" ];
+	if( [ pStyle isEqualToString:@"Dark" ] )
+		Theme = xyTheme::Dark;
+
+#elif defined( XY_OS_ANDROID ) // XY_OS_MACOS
 
 	xyContext& rContext = xyGetContext();
 
@@ -253,7 +264,13 @@ xyLanguage xyGetLanguage( void )
 
 	return Language;
 
-#elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
+#elif defined( XY_OS_MACOS ) // XY_OS_WINDOWS
+
+	NSString* pLanguageCode = [ [ NSLocale currentLocale ] languageCode ];
+
+	return { .LocaleName=[ pLanguageCode UTF8String ] };
+
+#elif defined( XY_OS_ANDROID ) // XY_OS_MACOS
 
 	xyContext& rContext = xyGetContext();
 	char       LanguageCode[ 2 ];
@@ -303,7 +320,18 @@ std::vector< xyDisplayAdapter > xyGetDisplayAdapters( void )
 
 	EnumDisplayMonitors( NULL, NULL, EnumProc, reinterpret_cast< LPARAM >( &DisplayAdapters ) );
 
-#elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
+#elif defined( XY_OS_MACOS ) // XY_OS_WINDOWS
+
+	for( NSScreen* pScreen in [ NSScreen screens ] )
+	{
+		xyDisplayAdapter Adapter = { .Name     = [ [ pScreen localizedName ] UTF8String ],
+		                             .FullRect = { .Left=NSMinX( pScreen.frame ),        .Top=NSMinY( pScreen.frame ),        .Right=NSMaxX( pScreen.frame ),        .Bottom=NSMaxY( pScreen.frame ) },
+		                             .WorkRect = { .Left=NSMinX( pScreen.visibleFrame ), .Top=NSMinY( pScreen.visibleFrame ), .Right=NSMaxX( pScreen.visibleFrame ), .Bottom=NSMaxY( pScreen.visibleFrame ) } };
+
+		DisplayAdapters.emplace_back( std::move( Adapter ) );
+	}
+
+#elif defined( XY_OS_ANDROID ) // XY_OS_MACOS
 
 	xyContext& rContext = xyGetContext();
 	JNIEnv*    pJNI;
