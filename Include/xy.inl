@@ -311,7 +311,7 @@ std::vector< xyDisplayAdapter > xyGetDisplayAdapters( void )
 
 	jobject      Activity       = rContext.pPlatformImpl->pNativeActivity->clazz;
 	jclass       ActivityClass  = pJNI->GetObjectClass( Activity );
-	jstring      DisplayService = ( jstring )pJNI->GetStaticObjectField( ActivityClass, pJNI->GetFieldID( ActivityClass, "DISPLAY_SERVICE", "Ljava/lang/String;" ) );
+	jstring      DisplayService = ( jstring )pJNI->GetStaticObjectField( ActivityClass, pJNI->GetStaticFieldID( ActivityClass, "DISPLAY_SERVICE", "Ljava/lang/String;" ) );
 	jobject      DisplayManager = pJNI->CallObjectMethod( Activity, pJNI->GetMethodID( ActivityClass, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;" ), DisplayService );
 	jobjectArray Displays       = ( jobjectArray )pJNI->CallObjectMethod( DisplayManager, pJNI->GetMethodID( pJNI->GetObjectClass( DisplayManager ), "getDisplays", "()[Landroid/view/Display;" ) );
 	jsize        DisplayCount   = pJNI->GetArrayLength( Displays );
