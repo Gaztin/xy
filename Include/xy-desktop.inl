@@ -35,7 +35,13 @@ xyMouse xyGetMouse( void )
 
 	return { .Active=false };
 
-#endif // XY_OS_WINDOWS
+#elif defined( XY_OS_MACOS ) // XY_OS_WINDOWS
+
+	NSPoint MouseLocation = [ NSEvent mouseLocation ];
+
+	return { .X=MouseLocation.x, .Y=MouseLocation.y, .Active=true };
+
+#endif // XY_OS_MACOS
 
 } // xyGetMouse
 
