@@ -147,6 +147,13 @@ struct xyLanguage
 extern xyContext& xyGetContext( void );
 
 /**
+ * Convert a wide-string to UTF8.
+ *
+ * @return A UTF8 string.
+ */
+extern std::string xyUTFString( std::wstring_view String );
+
+/**
  * Prompts a system message box containing a user-defined message and an 'OK' button.
  * The current thread is blocked until the message box is closed.
  *

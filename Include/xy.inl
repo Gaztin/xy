@@ -47,6 +47,25 @@ xyContext& xyGetContext( void )
 
 //////////////////////////////////////////////////////////////////////////
 
+extern std::string xyUTFString( std::wstring_view String )
+{
+
+#if defined( XY_OS_WINDOWS )
+
+	const int   RequiredSize = WideCharToMultiByte( CP_UTF8, 0, String.data(), static_cast< int >( String.size() ), NULL, 0, NULL, NULL );
+	std::string UTFString( RequiredSize, '\0' );
+
+	if( WideCharToMultiByte( CP_UTF8, 0, String.data(), static_cast< int >( String.size() ), UTFString.data(), static_cast< int >( UTFString.size() ), NULL, NULL ) > 0 )
+		return UTFString;
+
+	return { };
+
+#endif // XY_OS_WINDOWS
+
+} // xyUTFString
+
+//////////////////////////////////////////////////////////////////////////
+
 void xyMessageBox( std::string_view Title, std::string_view Message )
 {
 
@@ -227,6 +246,7 @@ xyTheme xyGetPreferredTheme( void )
 	{
 		case ACONFIGURATION_UI_MODE_NIGHT_NO:  { Theme = xyTheme::Light; } break;
 		case ACONFIGURATION_UI_MODE_NIGHT_YES: { Theme = xyTheme::Dark;  } break;
+
 		default: break;
 	}
 
@@ -238,6 +258,7 @@ xyTheme xyGetPreferredTheme( void )
 	{
 		case UIUserInterfaceStyleLight: { Theme = xyTheme::Light; } break;
 		case UIUserInterfaceStyleDark:  { Theme = xyTheme::Dark;  } break;
+
 		default: break;
 	}
 
@@ -258,11 +279,7 @@ xyLanguage xyGetLanguage( void )
 	WCHAR      Buffer[ LOCALE_NAME_MAX_LENGTH ];
 	GetUserDefaultLocaleName( Buffer, static_cast< int >( std::size( Buffer ) ) );
 
-	const size_t LocaleNameLength = wcslen( Buffer );
-	Language.LocaleName.resize( LocaleNameLength );
-	WideCharToMultiByte( CP_UTF8, 0, Buffer, static_cast< int >( LocaleNameLength ), Language.LocaleName.data(), static_cast< int >( Language.LocaleName.size() ), NULL, NULL );
-
-	return Language;
+	return { .LocaleName=xyUTFString( Buffer ) };
 
 #elif defined( XY_OS_MACOS ) // XY_OS_WINDOWS
 
