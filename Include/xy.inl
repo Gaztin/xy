@@ -374,7 +374,7 @@ std::vector< xyDisplayAdapter > xyGetDisplayAdapters( void )
 		}
 		else
 		{
-			// Work rect is entire display if there was no display cutout
+			// TODO: There are other ways to obtain the safe area
 			Adapter.WorkRect = Adapter.FullRect;
 		}
 
@@ -391,8 +391,10 @@ std::vector< xyDisplayAdapter > xyGetDisplayAdapters( void )
 	{
 		NSString*        pScreenName = [ pScreen debugDescription ];
 		CGRect           Bounds      = [ pScreen bounds ];
-		xyDisplayAdapter MainDisplay = { .Name       = [ pScreenName UTF8String ],
-		                                 .FullRect   = { .Left=CGRectGetMinX( Bounds ), .Top=CGRectGetMinY( Bounds ), .Right=CGRectGetMaxX( Bounds ), .Bottom=CGRectGetMaxY( Bounds ) } };
+		xyDisplayAdapter MainDisplay = { .Name     = [ pScreenName UTF8String ],
+		                                 .FullRect = { .Left=CGRectGetMinX( Bounds ), .Top=CGRectGetMinY( Bounds ), .Right=CGRectGetMaxX( Bounds ), .Bottom=CGRectGetMaxY( Bounds ) } };
+
+		// TODO: Obtain the safe area
 
 		DisplayAdapters.emplace_back( std::move( MainDisplay ) );
 	}
