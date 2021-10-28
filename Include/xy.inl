@@ -28,6 +28,7 @@
 #elif defined( XY_OS_ANDROID ) // XY_OS_MACOS
 #include <android/configuration.h>
 #include <android/native_activity.h>
+#include <uchar.h>
 #include <unistd.h>
 #elif defined( XY_OS_IOS ) // XY_OS_ANDROID
 #include <UIKit/UIKit.h>
@@ -61,7 +62,24 @@ extern std::string xyUTFString( std::wstring_view String )
 
 	return { };
 
-#endif // XY_OS_WINDOWS
+#elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
+
+	std::string UTFString;
+	char        MultiByteBuffer[ MB_CUR_MAX ];
+	mbstate_t   MultiByteState = { };
+
+	// Avoid too many reallocations
+	UTFString.reserve( String.size() * 2 );
+
+	for( wchar_t WideChar : String )
+	{
+		const size_t MultiByteCount = wcrtomb( &MultiByteBuffer[ 0 ], WideChar, &MultiByteState );
+		UTFString.append( MultiByteBuffer, MultiByteCount );
+	}
+
+	return UTFString;
+
+#endif// XY_OS_ANDROID
 
 } // xyUTFString
 
