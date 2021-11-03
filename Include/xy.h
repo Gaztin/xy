@@ -70,8 +70,8 @@
 #define XY_OS_ANDROID
 // Since there is no way to detect at compile time what UI mode we are targeting, we have to define all possible environments
 // List of UI modes can be found at https://developer.android.google.cn/guide/topics/resources/providing-resources.html#UiModeQualifier
-// (Desk Dock and Appliance corresponds to Desktop and Headless, respectively)
-#define XY_UI_MODES ( XY_UI_MODE_DESKTOP | XY_UI_MODE_PHONE | XY_UI_MODE_WATCH | XY_UI_MODE_TV | XY_UI_MODE_VR | XY_UI_MODE_CAR | XY_UI_MODE_HEADLESS )
+// (Appliance corresponds to Headless)
+#define XY_UI_MODES ( XY_UI_MODE_PHONE | XY_UI_MODE_WATCH | XY_UI_MODE_TV | XY_UI_MODE_VR | XY_UI_MODE_CAR | XY_UI_MODE_HEADLESS )
 
 #elif defined( __linux__ ) // __ANDROID__
 /// Linux

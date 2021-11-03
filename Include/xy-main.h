@@ -78,7 +78,6 @@ INT WINAPI WinMain( _In_ HINSTANCE Instance, _In_opt_ HINSTANCE /*PrevInstance*/
 	// Obtain the UI mode
 	switch( AConfiguration_getUiModeType( rContext.pPlatformImpl->pConfiguration ) )
 	{
-		case ACONFIGURATION_UI_MODE_TYPE_DESK:       { rContext.UIMode = XY_UI_MODE_DESKTOP;  } break;
 		case ACONFIGURATION_UI_MODE_TYPE_CAR:        { rContext.UIMode = XY_UI_MODE_CAR;      } break;
 		case ACONFIGURATION_UI_MODE_TYPE_TELEVISION: { rContext.UIMode = XY_UI_MODE_TV;       } break;
 		case ACONFIGURATION_UI_MODE_TYPE_APPLIANCE:  { rContext.UIMode = XY_UI_MODE_HEADLESS; } break;
