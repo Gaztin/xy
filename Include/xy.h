@@ -135,6 +135,13 @@ struct xyLanguage
 
 }; // xyLanguage
 
+struct xyBatteryState
+{
+	uint8_t CapacityPercentage = 100;
+	bool    Charging           = false;
+
+}; // xyPowerStatus
+
 
 //////////////////////////////////////////////////////////////////////////
 /// Functions
@@ -182,6 +189,21 @@ extern xyTheme xyGetPreferredTheme( void );
  * @return The language code.
  */
 extern xyLanguage xyGetLanguage( void );
+
+/**
+ * Determine whether or not this device has a battery.
+ * Recommended (but not necessary) to call this before xyGetBatteryState.
+ *
+ * @return true if this device has a battery, or false if it only uses electric power.
+ */
+extern bool xyHasBattery( void );
+
+/**
+ * Obtains the state of the battery power source on this device.
+ *
+ * @return The battery state.
+ */
+extern xyBatteryState xyGetBatteryState( void );
 
 /**
  * Obtains the display adapters connected to the device.

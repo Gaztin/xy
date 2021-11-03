@@ -326,6 +326,71 @@ xyLanguage xyGetLanguage( void )
 
 //////////////////////////////////////////////////////////////////////////
 
+bool xyHasBattery( void )
+{
+
+#if defined( XY_OS_WINDOWS )
+
+	// TODO: Check if laptop of not
+	return false;
+
+#elif defined( XY_OS_MACOS ) // XY_OS_WINDOWS
+
+	// TODO: Check if macbook or not
+	return false;
+
+#elif defined( XY_OS_ANDROID ) // XY_OS_MACOS
+	// All Android devices are battery-driven.
+	return true;
+#elif defined( XY_OS_IOS ) // XY_OS_ANDROID
+	return true;
+#elif defined( XY_OS_WATCHOS ) // XY_OS_IOS
+	return true;
+#elif defined( XY_OS_TVOS ) // XY_OS_WATCHOS
+	return false;
+#else // XY_OS_TVOS
+	return false;
+#endif // !XY_OS_WINDOWS && !XY_OS_MACOS && !XY_OS_ANDROID && !XY_OS_IOS && !XY_OS_WATCHOS && !XY_OS_TVOS
+
+} // xyHasBattery
+
+//////////////////////////////////////////////////////////////////////////
+
+xyBatteryState xyGetBatteryState( void )
+{
+	xyBatteryState BatteryState;
+
+#if defined( XY_OS_ANDROID )
+
+	xyContext& rContext = xyGetContext();
+	JNIEnv*    pEnv;
+	rContext.pPlatformImpl->pNativeActivity->vm->AttachCurrentThread( &pEnv, nullptr );
+
+	jobject   Activity            = rContext.pPlatformImpl->pNativeActivity->clazz;
+	jclass    ActivityClass       = pEnv->GetObjectClass( Activity );
+	jstring   BatteryService      = ( jstring )pEnv->GetStaticObjectField( ActivityClass, pEnv->GetStaticFieldID( ActivityClass, "BATTERY_SERVICE", "Ljava/lang/String;" ) );
+	jobject   BatteryManager      = pEnv->CallObjectMethod( Activity, pEnv->GetMethodID( ActivityClass, "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;" ), BatteryService );
+	jclass    BatteryManagerClass = pEnv->GetObjectClass( BatteryManager );
+	jint      PropertyCapacity    = pEnv->GetStaticIntField( BatteryManagerClass, pEnv->GetStaticFieldID( BatteryManagerClass, "BATTERY_PROPERTY_CAPACITY", "I" ) );
+	jint      PropertyStatus      = pEnv->GetStaticIntField( BatteryManagerClass, pEnv->GetStaticFieldID( BatteryManagerClass, "BATTERY_PROPERTY_STATUS",   "I" ) );
+	jint      StatusCharging      = pEnv->GetStaticIntField( BatteryManagerClass, pEnv->GetStaticFieldID( BatteryManagerClass, "BATTERY_STATUS_CHARGING",   "I" ) );
+	jmethodID GetIntProperty      = pEnv->GetMethodID( BatteryManagerClass, "getIntProperty", "(I)I" );
+	jint      Capacity            = pEnv->CallIntMethod( BatteryManager, GetIntProperty, PropertyCapacity );
+	jint      Status              = pEnv->CallIntMethod( BatteryManager, GetIntProperty, PropertyStatus );
+
+	BatteryState.CapacityPercentage = static_cast< uint8_t >( Capacity );
+	BatteryState.Charging           = Status == StatusCharging;
+
+	rContext.pPlatformImpl->pNativeActivity->vm->DetachCurrentThread();
+
+#endif // XY_OS_ANDROID
+
+	return BatteryState;
+
+} // xyGetBatteryState
+
+//////////////////////////////////////////////////////////////////////////
+
 std::vector< xyDisplayAdapter > xyGetDisplayAdapters( void )
 {
 	std::vector< xyDisplayAdapter > DisplayAdapters;
