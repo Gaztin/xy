@@ -137,8 +137,11 @@ struct xyLanguage
 
 struct xyBatteryState
 {
+	operator bool( void ) const { return Valid; }
+
 	uint8_t CapacityPercentage = 100;
 	bool    Charging           = false;
+	bool    Valid              = false;
 
 }; // xyPowerStatus
 
@@ -191,15 +194,16 @@ extern xyTheme xyGetPreferredTheme( void );
 extern xyLanguage xyGetLanguage( void );
 
 /**
- * Determine whether or not this device has a battery.
- * Recommended (but not necessary) to call this before xyGetBatteryState.
- *
- * @return true if this device has a battery, or false if it only uses electric power.
- */
-extern bool xyHasBattery( void );
-
-/**
  * Obtains the state of the battery power source on this device.
+ *
+ * Note: The battery state has a Valid field that is set to true if battery information was successfully obtained.
+ * If it is false, that either means that the device is only using electric power, or that an error occurred.
+ * Either way, the battery state provides a boolean operator that allows you to write code like this:
+ * 
+ * if( xyBatteryState State = xyGetBatteryState() )
+ * {
+ *     // Successfully obtained the battery state!
+ * }
  *
  * @return The battery state.
  */

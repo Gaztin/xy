@@ -328,48 +328,6 @@ xyLanguage xyGetLanguage( void )
 
 //////////////////////////////////////////////////////////////////////////
 
-bool xyHasBattery( void )
-{
-
-#if defined( XY_OS_WINDOWS )
-
-	SYSTEM_POWER_STATUS SystemPowerStatus;
-	if( GetSystemPowerStatus( &SystemPowerStatus ) )
-		return SystemPowerStatus.BatteryFlag ^ 128;
-
-	return false;
-
-#elif defined( XY_OS_MACOS ) // XY_OS_WINDOWS
-
-	// TODO: Pretty ineffective way to check if the service is available. Consider storing it in xyContext.
-	CFMutableDictionaryRef Service = IOServiceMatching( "IOPMPowerSource" );
-	if( io_registry_entry_t Entry = IOServiceGetMatchingService( kIOMasterPortDefault, Service ) )
-	{
-		IOObjectRelease( Entry );
-
-		return true;
-	}
-
-	return false;
-
-#elif defined( XY_OS_ANDROID ) || defined( XY_OS_IOS ) || defined( XY_OS_WATCHOS ) // XY_OS_MACOS
-
-	return true;
-
-#elif defined( XY_OS_TVOS ) // XY_OS_ANDROID || XY_OS_IOS || XY_OS_WATCHOS
-
-	return false;
-
-#else // XY_OS_TVOS
-
-	return false;
-
-#endif // !XY_OS_WINDOWS && !XY_OS_MACOS && !XY_OS_ANDROID && !XY_OS_IOS && !XY_OS_WATCHOS && !XY_OS_TVOS
-
-} // xyHasBattery
-
-//////////////////////////////////////////////////////////////////////////
-
 xyBatteryState xyGetBatteryState( void )
 {
 	xyBatteryState BatteryState;
@@ -377,12 +335,11 @@ xyBatteryState xyGetBatteryState( void )
 #if defined( XY_OS_WINDOWS )
 
 	SYSTEM_POWER_STATUS SystemPowerStatus;
-	if( GetSystemPowerStatus( &SystemPowerStatus ) )
+	if( GetSystemPowerStatus( &SystemPowerStatus ) && SystemPowerStatus.BatteryFlag ^ 128 )
 	{
-		if( SystemPowerStatus.BatteryLifePercent != 255 )
-			BatteryState.CapacityPercentage = SystemPowerStatus.BatteryLifePercent;
-
-		BatteryState.Charging = SystemPowerStatus.BatteryFlag & 8;
+		BatteryState.CapacityPercentage = SystemPowerStatus.BatteryLifePercent;
+		BatteryState.Charging           = SystemPowerStatus.BatteryFlag & 8;
+		BatteryState.Valid              = true;
 	}
 
 #elif defined( XY_OS_MACOS ) // XY_OS_WINDOWS
@@ -400,6 +357,7 @@ xyBatteryState xyGetBatteryState( void )
 
 			BatteryState.CapacityPercentage = static_cast< uint8_t >( 100.0 * Capacity / MaxCapacity );
 			BatteryState.Charging           = IsCharging;
+			BatteryState.Valid              = true;
 		}
 
 		IOObjectRelease( Entry );
@@ -425,6 +383,7 @@ xyBatteryState xyGetBatteryState( void )
 
 	BatteryState.CapacityPercentage = static_cast< uint8_t >( Capacity );
 	BatteryState.Charging           = Status == StatusCharging;
+	BatteryState.Valid              = true;
 
 	rContext.pPlatformImpl->pNativeActivity->vm->DetachCurrentThread();
 
@@ -433,7 +392,8 @@ xyBatteryState xyGetBatteryState( void )
 	UIDevice* pDevice = [ UIDevice currentDevice ];
 	BatteryState.CapacityPercentage = static_cast< uint8_t >( 100.0 * [ pDevice batteryLevel ] );
 	BatteryState.Charging           = [ pDevice batteryState ] == UIDeviceBatteryStateCharging;
-	
+	BatteryState.Valid              = true;
+
 #endif // XY_OS_IOS
 
 	return BatteryState;
