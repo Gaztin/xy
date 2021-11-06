@@ -25,6 +25,7 @@
 #include <lmcons.h>
 #elif defined( XY_OS_MACOS ) // XY_OS_WINDOWS
 #include <Cocoa/Cocoa.h>
+#include <Foundation/Foundation.h>
 #elif defined( XY_OS_ANDROID ) // XY_OS_MACOS
 #include <android/configuration.h>
 #include <android/native_activity.h>
@@ -340,7 +341,15 @@ bool xyHasBattery( void )
 
 #elif defined( XY_OS_MACOS ) // XY_OS_WINDOWS
 
-	// TODO: Check if macbook or not
+	// TODO: Pretty ineffective way to check if the service is available. Consider storing it in xyContext.
+	CFMutableDictionaryRef Service = IOServiceMatching( "IOPMPowerSource" );
+	if( io_registry_entry_t Entry = IOServiceGetMatchingService( kIOMasterPortDefault, Service ) )
+	{
+		IOObjectRelease( Entry );
+
+		return true;
+	}
+
 	return false;
 
 #elif defined( XY_OS_ANDROID ) || defined( XY_OS_IOS ) || defined( XY_OS_WATCHOS ) // XY_OS_MACOS
@@ -373,10 +382,30 @@ xyBatteryState xyGetBatteryState( void )
 		if( SystemPowerStatus.BatteryLifePercent != 255 )
 			BatteryState.CapacityPercentage = SystemPowerStatus.BatteryLifePercent;
 
-		BatteryState.Charging	= SystemPowerStatus.BatteryFlag & 8;
+		BatteryState.Charging = SystemPowerStatus.BatteryFlag & 8;
 	}
 
-#elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
+#elif defined( XY_OS_MACOS ) // XY_OS_WINDOWS
+
+	CFMutableDictionaryRef Service = IOServiceMatching( "IOPMPowerSource" );
+	if( io_registry_entry_t Entry = IOServiceGetMatchingService( kIOMasterPortDefault, Service ) )
+	{
+		CFMutableDictionaryRef Properties = nullptr;
+		if( IORegistryEntryCreateCFProperties( Entry, &Properties, nullptr, 0 ) == kIOReturnSuccess )
+		{
+			NSDictionary* pRawProperties = ( NSDictionary* )Properties;
+			bool          IsCharging     = [ [ pRawProperties objectForKey:@"IsCharging" ]      boolValue ];
+			double        Capacity       = [ [ pRawProperties objectForKey:@"CurrentCapacity" ] doubleValue ];
+			double        MaxCapacity    = [ [ pRawProperties objectForKey:@"MaxCapacity" ]     doubleValue ];
+
+			BatteryState.CapacityPercentage = static_cast< uint8_t >( 100.0 * Capacity / MaxCapacity );
+			BatteryState.Charging           = IsCharging;
+		}
+
+		IOObjectRelease( Entry );
+	}
+
+#elif defined( XY_OS_ANDROID ) // XY_OS_MACOS
 
 	xyContext& rContext = xyGetContext();
 	JNIEnv*    pEnv;
