@@ -164,6 +164,8 @@ int main( int ArgC, char** ppArgV )
 	rContext.CommandLineArgs = std::span< char* >( ppArgV, ArgC );
 	rContext.UIMode          = XY_UI_MODE_PHONE;
 
+	setlocale( LC_CTYPE, "UTF-8" );
+
 	@autoreleasepool
 	{
 		return UIApplicationMain( ArgC, ppArgV, nil, NSStringFromClass( [ xyAppDelegate class ] ) );

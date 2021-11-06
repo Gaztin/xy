@@ -63,7 +63,7 @@ extern std::string xyUTFString( std::wstring_view String )
 
 	return { };
 
-#elif defined( XY_OS_MACOS ) || defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
+#elif defined( XY_OS_MACOS ) || defined( XY_OS_ANDROID ) || defined( XY_OS_IOS ) // XY_OS_WINDOWS
 
 	std::string UTFString;
 	char        MultiByteBuffer[ MB_CUR_MAX ];
@@ -81,7 +81,7 @@ extern std::string xyUTFString( std::wstring_view String )
 
 	return UTFString;
 
-#endif// XY_OS_ANDROID
+#endif// XY_OS_MACOS || XY_OS_ANDROID || XY_OS_IOS
 
 } // xyUTFString
 
