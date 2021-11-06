@@ -331,7 +331,10 @@ bool xyHasBattery( void )
 
 #if defined( XY_OS_WINDOWS )
 
-	// TODO: Check if laptop of not
+	SYSTEM_POWER_STATUS SystemPowerStatus;
+	if( GetSystemPowerStatus( &SystemPowerStatus ) )
+		return SystemPowerStatus.BatteryFlag ^ 128;
+
 	return false;
 
 #elif defined( XY_OS_MACOS ) // XY_OS_WINDOWS
@@ -339,17 +342,18 @@ bool xyHasBattery( void )
 	// TODO: Check if macbook or not
 	return false;
 
-#elif defined( XY_OS_ANDROID ) // XY_OS_MACOS
-	// All Android devices are battery-driven.
+#elif defined( XY_OS_ANDROID ) || defined( XY_OS_IOS ) || defined( XY_OS_WATCHOS ) // XY_OS_MACOS
+
 	return true;
-#elif defined( XY_OS_IOS ) // XY_OS_ANDROID
-	return true;
-#elif defined( XY_OS_WATCHOS ) // XY_OS_IOS
-	return true;
-#elif defined( XY_OS_TVOS ) // XY_OS_WATCHOS
+
+#elif defined( XY_OS_TVOS ) // XY_OS_ANDROID || XY_OS_IOS || XY_OS_WATCHOS
+
 	return false;
+
 #else // XY_OS_TVOS
+
 	return false;
+
 #endif // !XY_OS_WINDOWS && !XY_OS_MACOS && !XY_OS_ANDROID && !XY_OS_IOS && !XY_OS_WATCHOS && !XY_OS_TVOS
 
 } // xyHasBattery
@@ -360,7 +364,18 @@ xyBatteryState xyGetBatteryState( void )
 {
 	xyBatteryState BatteryState;
 
-#if defined( XY_OS_ANDROID )
+#if defined( XY_OS_WINDOWS )
+
+	SYSTEM_POWER_STATUS SystemPowerStatus;
+	if( GetSystemPowerStatus( &SystemPowerStatus ) )
+	{
+		if( SystemPowerStatus.BatteryLifePercent != 255 )
+			BatteryState.CapacityPercentage = SystemPowerStatus.BatteryLifePercent;
+
+		BatteryState.Charging	= SystemPowerStatus.BatteryFlag & 8;
+	}
+
+#elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
 
 	xyContext& rContext = xyGetContext();
 	JNIEnv*    pEnv;
