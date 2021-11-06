@@ -57,7 +57,23 @@ INT WINAPI WinMain( _In_ HINSTANCE Instance, _In_opt_ HINSTANCE /*PrevInstance*/
 
 } // WinMain
 
-#elif defined( XY_OS_ANDROID ) // XY_OS_WINDOWS
+#elif defined( XY_OS_MACOS ) // XY_OS_WINDOWS
+
+#include <locale.h>
+
+int main( int ArgC, char** ppArgV )
+{
+	xyContext& rContext = xyGetContext();
+	rContext.CommandLineArgs = std::span< char* >( ppArgV, ArgC );
+	rContext.UIMode          = XY_UI_MODE_DESKTOP;
+
+	setlocale( LC_CTYPE, "UTF-8" );
+
+	return xyMain();
+
+} // main
+
+#elif defined( XY_OS_ANDROID ) // XY_OS_MACOS
 
 #include <android/native_activity.h>
 #include <fcntl.h>
