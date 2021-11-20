@@ -43,6 +43,20 @@ extern int xyMain( void );
 
 #include <windows.h>
 
+int main( int ArgC, char** ppArgV )
+{
+	xyContext& rContext      = xyGetContext();
+	rContext.CommandLineArgs = std::span< char* >( ppArgV, ArgC );
+	rContext.pPlatformImpl   = std::make_unique< xyPlatformImpl >();
+	rContext.UIMode          = XY_UI_MODE_DESKTOP;
+
+	// Store the handle to the application instance
+	rContext.pPlatformImpl->ApplicationInstanceHandle = GetModuleHandle( NULL );
+
+	return xyMain();
+
+} // main
+
 INT WINAPI WinMain( _In_ HINSTANCE Instance, _In_opt_ HINSTANCE /*PrevInstance*/, _In_ LPSTR /*CmdLine*/, _In_ int /*ShowCmd*/ )
 {
 	xyContext& rContext      = xyGetContext();
@@ -63,7 +77,7 @@ INT WINAPI WinMain( _In_ HINSTANCE Instance, _In_opt_ HINSTANCE /*PrevInstance*/
 
 int main( int ArgC, char** ppArgV )
 {
-	xyContext& rContext = xyGetContext();
+	xyContext& rContext      = xyGetContext();
 	rContext.CommandLineArgs = std::span< char* >( ppArgV, ArgC );
 	rContext.UIMode          = XY_UI_MODE_DESKTOP;
 
@@ -160,7 +174,7 @@ int main( int ArgC, char** ppArgV )
 
 int main( int ArgC, char** ppArgV )
 {
-	xyContext& rContext = xyGetContext();
+	xyContext& rContext      = xyGetContext();
 	rContext.CommandLineArgs = std::span< char* >( ppArgV, ArgC );
 	rContext.UIMode          = XY_UI_MODE_PHONE;
 
@@ -177,7 +191,7 @@ int main( int ArgC, char** ppArgV )
 
 int main( int ArgC, char** ppArgV )
 {
-	xyContext& rContext = xyGetContext();
+	xyContext& rContext      = xyGetContext();
 	rContext.CommandLineArgs = std::span< char* >( ppArgV, ArgC );
 	rContext.UIMode          = XY_UI_MODE_HEADLESS; // We don't know the UI mode. Might as well assume the worst.
 
