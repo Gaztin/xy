@@ -38,7 +38,9 @@ struct xyPlatformImpl
 {
 	ANativeActivity* pNativeActivity     = nullptr;
 	AConfiguration*  pConfiguration      = nullptr;
+	ALooper*         pInputLooper        = nullptr;
 	int              JavaThreadPipe[ 2 ] = { };
+	int              InputQueuePipe[ 2 ] = { };
 
 }; // xyPlatformImpl
 

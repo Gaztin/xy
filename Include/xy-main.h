@@ -87,6 +87,68 @@ int main( int ArgC, char** ppArgV )
 	// Store the activity data
 	rContext.pPlatformImpl->pNativeActivity = pActivity;
 
+	// Set up callbacks
+	pActivity->callbacks->onInputQueueCreated = []( ANativeActivity* /*pActivity*/, AInputQueue* pQueue )
+	{
+		xyContext& rContext = xyGetContext();
+		ALooper*   pLooper  = ALooper_prepare( 0 );
+
+		pipe2( rContext.pPlatformImpl->InputQueuePipe, O_NONBLOCK | O_CLOEXEC );
+		AInputQueue_attachLooper( pQueue, pLooper, rContext.pPlatformImpl->InputQueuePipe[ 0 ], []( int Read, int Events, void* pData ) -> int
+		{
+			AInputQueue* pQueue = static_cast< AInputQueue* >( pData );
+			if( AInputQueue_hasEvents( pQueue ) )
+			{
+				AInputEvent* pEvent;
+				while( AInputQueue_getEvent( pQueue, &pEvent ) >= 0 )
+				{
+					int32_t Type = AInputEvent_getType( pEvent );
+
+					switch( Type )
+					{
+						case AINPUT_EVENT_TYPE_KEY:
+						{
+							const int32_t Action = AKeyEvent_getAction( pEvent );
+							if( Action == AKEY_EVENT_ACTION_DOWN )
+							{
+								xyContext& rContext       = xyGetContext();
+								JNIEnv*    pEnv           = rContext.pPlatformImpl->pNativeActivity->env;
+								jclass     KeyEventClass  = pEnv->FindClass( "android/view/KeyEvent" );
+								jmethodID  KeyEventCtor   = pEnv->GetMethodID( KeyEventClass, "<init>", "(II)V" );
+								jobject    KeyEvent       = pEnv->NewObject( KeyEventClass, KeyEventCtor, Action, AKeyEvent_getKeyCode( pEvent ) );
+								jmethodID  GetUnicodeChar = pEnv->GetMethodID( KeyEventClass, "getUnicodeChar", "()I" );
+								char32_t   UnicodeChar    = pEnv->CallIntMethod( KeyEvent, GetUnicodeChar );
+								printf( "" );
+
+								if( UnicodeChar == '0' )
+								{
+								}
+							}
+						}
+						break;
+
+						default:
+						break;
+					}
+
+					AInputQueue_finishEvent( pQueue, pEvent, 1 );
+				}
+			}
+
+			// Keep listening
+			return 1;
+		}, pQueue );
+
+		rContext.pPlatformImpl->pInputLooper = pLooper;
+	};
+	pActivity->callbacks->onInputQueueDestroyed = []( ANativeActivity* /*pActivity*/, AInputQueue* pQueue )
+	{
+		xyContext& rContext = xyGetContext();
+		AInputQueue_detachLooper( pQueue );
+		close( rContext.pPlatformImpl->InputQueuePipe[ 1 ] );
+		close( rContext.pPlatformImpl->InputQueuePipe[ 0 ] );
+	};
+
 	// Obtain the configuration
 	rContext.pPlatformImpl->pConfiguration = AConfiguration_new();
 	AConfiguration_fromAssetManager( rContext.pPlatformImpl->pConfiguration, rContext.pPlatformImpl->pNativeActivity->assetManager );
