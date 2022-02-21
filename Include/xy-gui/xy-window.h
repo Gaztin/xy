@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Sebastian Kylander https://gaztin.com/
+ * Copyright (c) 2022 Sebastian Kylander https://gaztin.com/
  *
  * This software is provided 'as-is', without any express or implied warranty. In no event will
  * the authors be held liable for any damages arising from the use of this software.
@@ -15,16 +15,28 @@
  * 3. This notice may not be removed or altered from any source distribution.
  */
 
-#define XY_IMPLEMENT
-#include "xy-platforms/xy-android.h"
-#include "xy-platforms/xy-ios.h"
-#include "xy-platforms/xy-macos.h"
-#include "xy-platforms/xy-tvos.h"
-#include "xy-platforms/xy-watchos.h"
-#include "xy-platforms/xy-windows.h"
-#include "xy.inl"
-#include "xy-desktop.inl"
+#pragma once
 
-#if !defined( XY_NO_GUI )
-#include "xy-gui/xy-window.inl"
-#endif // !XY_NO_GUI
+#include "../xy.h"
+
+class xyWindow
+{
+public:
+
+	xyWindow( const xyWindow& ) = delete;
+	xyWindow( xyWindow&& );
+	xyWindow( xySize DesiredSize );
+	~xyWindow();
+
+	xyWindow& operator=( const xyWindow& ) = delete;
+	xyWindow& operator=( xyWindow&& ) = delete;
+
+	void PollEvents();
+
+	bool IsOpen() const;
+
+private:
+
+	void* m_pPlatformHandle = nullptr;
+
+}; // xyWindow
