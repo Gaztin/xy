@@ -102,7 +102,8 @@ struct xyContext
 {
 	std::span< char* >                CommandLineArgs;
 	std::unique_ptr< xyPlatformImpl > pPlatformImpl;
-	uint32_t                          UIMode = 0x0;
+	uint16_t                          ActiveUIMode      = 0;
+	uint16_t                          CompatibleUIModes = 0xFFFF;
 
 }; // xyContext
 

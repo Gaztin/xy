@@ -48,7 +48,7 @@ int main( int ArgC, char** ppArgV )
 	xyContext& rContext      = xyGetContext();
 	rContext.CommandLineArgs = std::span< char* >( ppArgV, ArgC );
 	rContext.pPlatformImpl   = std::make_unique< xyPlatformImpl >();
-	rContext.UIMode          = XY_UI_MODE_DESKTOP;
+	rContext.ActiveUIMode    = XY_UI_MODE_DESKTOP;
 
 	// Store the handle to the application instance
 	rContext.pPlatformImpl->ApplicationInstanceHandle = GetModuleHandle( NULL );
@@ -62,7 +62,7 @@ INT WINAPI WinMain( _In_ HINSTANCE Instance, _In_opt_ HINSTANCE /*PrevInstance*/
 	xyContext& rContext      = xyGetContext();
 	rContext.CommandLineArgs = std::span< char* >( __argv, __argc );
 	rContext.pPlatformImpl   = std::make_unique< xyPlatformImpl >();
-	rContext.UIMode          = XY_UI_MODE_DESKTOP;
+	rContext.ActiveUIMode    = XY_UI_MODE_DESKTOP;
 
 	// Store the handle to the application instance
 	rContext.pPlatformImpl->ApplicationInstanceHandle = Instance;
@@ -79,7 +79,7 @@ int main( int ArgC, char** ppArgV )
 {
 	xyContext& rContext      = xyGetContext();
 	rContext.CommandLineArgs = std::span< char* >( ppArgV, ArgC );
-	rContext.UIMode          = XY_UI_MODE_DESKTOP;
+	rContext.ActiveUIMode    = XY_UI_MODE_DESKTOP;
 
 	setlocale( LC_CTYPE, "UTF-8" );
 
@@ -108,12 +108,12 @@ int main( int ArgC, char** ppArgV )
 	// Obtain the UI mode
 	switch( AConfiguration_getUiModeType( rContext.pPlatformImpl->pConfiguration ) )
 	{
-		case ACONFIGURATION_UI_MODE_TYPE_CAR:        { rContext.UIMode = XY_UI_MODE_CAR;      } break;
-		case ACONFIGURATION_UI_MODE_TYPE_TELEVISION: { rContext.UIMode = XY_UI_MODE_TV;       } break;
-		case ACONFIGURATION_UI_MODE_TYPE_APPLIANCE:  { rContext.UIMode = XY_UI_MODE_HEADLESS; } break;
-		case ACONFIGURATION_UI_MODE_TYPE_WATCH:      { rContext.UIMode = XY_UI_MODE_WATCH;    } break;
-		case ACONFIGURATION_UI_MODE_TYPE_VR_HEADSET: { rContext.UIMode = XY_UI_MODE_VR;       } break;
-		default:                                     { rContext.UIMode = XY_UI_MODE_PHONE;    } break; // Default to phone UI
+		case ACONFIGURATION_UI_MODE_TYPE_CAR:        { rContext.ActiveUIMode = XY_UI_MODE_CAR;      } break;
+		case ACONFIGURATION_UI_MODE_TYPE_TELEVISION: { rContext.ActiveUIMode = XY_UI_MODE_TV;       } break;
+		case ACONFIGURATION_UI_MODE_TYPE_APPLIANCE:  { rContext.ActiveUIMode = XY_UI_MODE_HEADLESS; } break;
+		case ACONFIGURATION_UI_MODE_TYPE_WATCH:      { rContext.ActiveUIMode = XY_UI_MODE_WATCH;    } break;
+		case ACONFIGURATION_UI_MODE_TYPE_VR_HEADSET: { rContext.ActiveUIMode = XY_UI_MODE_VR;       } break;
+		default:                                     { rContext.ActiveUIMode = XY_UI_MODE_PHONE;    } break; // Default to phone UI
 	}
 
 	// Obtain the looper for the main thread
@@ -176,7 +176,7 @@ int main( int ArgC, char** ppArgV )
 {
 	xyContext& rContext      = xyGetContext();
 	rContext.CommandLineArgs = std::span< char* >( ppArgV, ArgC );
-	rContext.UIMode          = XY_UI_MODE_PHONE;
+	rContext.ActiveUIMode    = XY_UI_MODE_PHONE;
 
 	setlocale( LC_CTYPE, "UTF-8" );
 
@@ -193,7 +193,7 @@ int main( int ArgC, char** ppArgV )
 {
 	xyContext& rContext      = xyGetContext();
 	rContext.CommandLineArgs = std::span< char* >( ppArgV, ArgC );
-	rContext.UIMode          = XY_UI_MODE_HEADLESS; // We don't know the UI mode. Might as well assume the worst.
+	rContext.ActiveUIMode    = XY_UI_MODE_HEADLESS; // We don't know the UI mode. Might as well assume the worst.
 
 	return xyMain();
 
