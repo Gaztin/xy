@@ -16,3 +16,7 @@
  */
 
 #include "xy.h"
+
+#if !defined( XY_NO_GUI )
+#include "xy-gui/xy-window.h"
+#endif // !XY_NO_GUI

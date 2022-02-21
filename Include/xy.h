@@ -107,6 +107,13 @@ struct xyContext
 
 }; // xyContext
 
+struct xySize
+{
+	uint16_t Width  = 0;
+	uint16_t Height = 0;
+
+}; // xySize
+
 struct xyRect
 {
 	int32_t Left   = 0;
@@ -223,6 +230,7 @@ extern xyBatteryState xyGetBatteryState( void );
  * @return A vector of display adapters.
  */
 extern std::vector< xyDisplayAdapter > xyGetDisplayAdapters( void );
+
 
 //////////////////////////////////////////////////////////////////////////
 /*
