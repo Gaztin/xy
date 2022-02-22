@@ -41,6 +41,7 @@ public:
 	xyWindow& operator=( xyWindow&& ) = delete;
 
 	// Methods
+	void Show();
 	void PollEvents();
 	bool IsOpen() const;
 
@@ -98,8 +99,6 @@ xyWindow::xyWindow( xySize DesiredSize )
 
 	m_pPlatformHandle = CreateWindowExW( WS_EX_OVERLAPPEDWINDOW, L"xyWindow", L"xyWindow", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, ( int )DesiredSize.Width, ( int )DesiredSize.Height, NULL, NULL, NULL, NULL );
 
-	ShowWindow( ( HWND )m_pPlatformHandle, SW_SHOW );
-
 #endif // XY_OS_WINDOWS
 
 } // xyWindow
@@ -114,6 +113,17 @@ xyWindow::~xyWindow()
 #endif // XY_OS_WINDOWS
 
 } // ~xyWindow
+
+//////////////////////////////////////////////////////////////////////////
+
+void xyWindow::Show()
+{
+
+#if defined( XY_OS_WINDOWS )
+	ShowWindow( ( HWND )m_pPlatformHandle, SW_SHOW );
+#endif // XY_OS_WINDOWS
+
+} // Show
 
 //////////////////////////////////////////////////////////////////////////
 
