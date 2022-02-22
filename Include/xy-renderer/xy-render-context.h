@@ -20,37 +20,34 @@
 //////////////////////////////////////////////////////////////////////////
 /// Includes
 
-#include "../xy.h"
+#include "xy-renderers.h"
 
 
 //////////////////////////////////////////////////////////////////////////
 /// Classes
 
-class xyWindow
+class xyWindow;
+
+class xyRenderContext
 {
 public:
 
 	/// Constructors/Destructors
-	xyWindow( const xyWindow& ) = delete;
-	xyWindow( xyWindow&& );
-	xyWindow( xySize DesiredSize );
-	~xyWindow();
+	xyRenderContext( const xyWindow& rWindow );
+	xyRenderContext( const xyRenderContext& ) = delete;
+	xyRenderContext( xyRenderContext&& )      = delete;
+	~xyRenderContext();
 
 	/// Assignment operators
-	xyWindow& operator=( const xyWindow& ) = delete;
-	xyWindow& operator=( xyWindow&& ) = delete;
-
-	// Methods
-	void Show();
-	void PollEvents();
-	bool IsOpen() const;
+	xyRenderContext& operator=( xyRenderContext&& ) = delete;
+	xyRenderContext& operator=( const xyRenderContext& ) = delete;
 
 private:
 
-	/// Member variables
-	void* m_pPlatformHandle = nullptr;
+	// Member variables
+	void* m_pImpl = nullptr;
 
-}; // xyWindow
+}; // xyRenderContext
 
 
 //////////////////////////////////////////////////////////////////////////
@@ -68,90 +65,62 @@ private:
 //////////////////////////////////////////////////////////////////////////
 /// Includes
 
-#include <utility>
+#if defined( XY_HAS_VULKAN )
+#include <vulkan/vulkan.h>
+#endif // XY_HAS_VULKAN
 
-#if defined( XY_OS_WINDOWS )
-#include <Windows.h>
-#endif // XY_OS_WINDOWS
+
+//////////////////////////////////////////////////////////////////////////
+/// Data structures
+
+#if defined( XY_HAS_VULKAN )
+
+struct ImplVulkan
+{
+	VkInstance Instance = VK_NULL_HANDLE;
+
+}; // ImplVulkan
+
+#endif // XY_HAS_VULKAN
+
 
 //////////////////////////////////////////////////////////////////////////
 /// Class methods
 
-xyWindow::xyWindow( xyWindow&& rrOther )
-	: m_pPlatformHandle( std::exchange( rrOther.m_pPlatformHandle, nullptr ) )
+xyRenderContext::xyRenderContext( const xyWindow& /*rWindow*/ )
 {
 
-} // xyWindow
+#ifdef XY_HAS_VULKAN
+
+	VkApplicationInfo    ApplicationInfo{ .sType = VK_STRUCTURE_TYPE_APPLICATION_INFO, .pNext = nullptr, .pApplicationName = "xy", .applicationVersion = 0, .pEngineName = "xy-renderer", .engineVersion = 0, .apiVersion = VK_API_VERSION_1_0 };
+	VkInstanceCreateInfo InstanceCreateInfo{ .sType = VK_STRUCTURE_TYPE_INSTANCE_CREATE_INFO, .pNext = nullptr, .flags = 0, .pApplicationInfo = &ApplicationInfo, .enabledLayerCount = 0, .ppEnabledLayerNames = nullptr, .enabledExtensionCount = 0, .ppEnabledExtensionNames = nullptr };
+	ImplVulkan&          rImpl = *static_cast< ImplVulkan* >( m_pImpl = new ImplVulkan() );
+	VkResult             Result;
+
+	if( ( Result = vkCreateInstance( &InstanceCreateInfo, nullptr, &rImpl.Instance ) ) != VK_SUCCESS )
+		return;
+
+#endif // XY_HAS_VULKAN
+
+} // xyRenderContext
 
 //////////////////////////////////////////////////////////////////////////
 
-xyWindow::xyWindow( xySize DesiredSize )
-{
-	// Desktop is the only UI mode that supports multiple windows
-	static int NumWindowsCreated = 0;
-	if( ++NumWindowsCreated > 1 )
-		xyGetContext().CompatibleUIModes = XY_UI_MODE_DESKTOP;
-
-#if defined( XY_OS_WINDOWS )
-
-	static const WNDCLASSEXW ClassDesc{ sizeof( WNDCLASSEXW ), CS_VREDRAW | CS_HREDRAW, DefWindowProcW, 0, 0, NULL, NULL, NULL, CreateSolidBrush( RGB( 255, 0, 255 ) ), NULL, L"xyWindow" };
-	static auto              Class    = RegisterClassExW( &ClassDesc );
-
-	m_pPlatformHandle = CreateWindowExW( WS_EX_OVERLAPPEDWINDOW, L"xyWindow", L"xyWindow", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, ( int )DesiredSize.Width, ( int )DesiredSize.Height, NULL, NULL, NULL, NULL );
-
-#endif // XY_OS_WINDOWS
-
-} // xyWindow
-
-//////////////////////////////////////////////////////////////////////////
-
-xyWindow::~xyWindow()
+xyRenderContext::~xyRenderContext()
 {
 
-#if defined( XY_OS_WINDOWS )
-	if( m_pPlatformHandle ) DestroyWindow( ( HWND )m_pPlatformHandle );
-#endif // XY_OS_WINDOWS
+#ifdef XY_HAS_VULKAN
 
-} // ~xyWindow
+	ImplVulkan& rImpl = *static_cast< ImplVulkan* >( m_pImpl );
 
-//////////////////////////////////////////////////////////////////////////
+	if( rImpl.Instance )
+		vkDestroyInstance( rImpl.Instance, nullptr );
 
-void xyWindow::Show()
-{
+	delete &rImpl;
 
-#if defined( XY_OS_WINDOWS )
-	ShowWindow( ( HWND )m_pPlatformHandle, SW_SHOW );
-#endif // XY_OS_WINDOWS
+#endif // XY_HAS_VULKAN
 
-} // Show
+} // ~xyRenderContext
 
-//////////////////////////////////////////////////////////////////////////
-
-void xyWindow::PollEvents()
-{
-
-#if defined( XY_OS_WINDOWS )
-
-	MSG Message;
-	while( PeekMessageW( &Message, ( HWND )m_pPlatformHandle, 0, 0, PM_REMOVE ) )
-	{
-		TranslateMessage( &Message );
-		DispatchMessageW( &Message );
-	}
-
-#endif // XY_OS_WINDOWS
-
-} // PollEvents
-
-//////////////////////////////////////////////////////////////////////////
-
-bool xyWindow::IsOpen() const
-{
-
-#if defined( XY_OS_WINDOWS )
-	return IsWindow( ( HWND )m_pPlatformHandle );
-#endif // XY_OS_WINDOWS
-
-} // IsOpen
 
 #endif // XY_IMPLEMENT

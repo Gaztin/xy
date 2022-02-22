@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2021 Sebastian Kylander https://gaztin.com/
+ * Copyright (c) 2022 Sebastian Kylander https://gaztin.com/
  *
  * This software is provided 'as-is', without any express or implied warranty. In no event will
  * the authors be held liable for any damages arising from the use of this software.
@@ -15,12 +15,9 @@
  * 3. This notice may not be removed or altered from any source distribution.
  */
 
-#include "xy.h"
+#pragma once
 
-#if !defined( XY_NO_GUI )
-#include "xy-gui/xy-window.h"
-#endif // !XY_NO_GUI
+#if __has_include( <vulkan/vulkan.h> )
+#define XY_HAS_VULKAN 1
+#endif // __has_include( <vulkan/vulkan.h> )
 
-#if !defined( XY_NO_RENDERER )
-#include "xy-renderer/xy-render-context.h"
-#endif // !XY_NO_RENDERER
