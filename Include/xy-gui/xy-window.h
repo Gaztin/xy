@@ -31,6 +31,7 @@ public:
 	xyWindow& operator=( const xyWindow& ) = delete;
 	xyWindow& operator=( xyWindow&& ) = delete;
 
+	void Show();
 	void PollEvents();
 
 	bool IsOpen() const;
