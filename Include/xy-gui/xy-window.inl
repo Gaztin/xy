@@ -19,7 +19,7 @@
 
 #include <utility>
 
-#if defined( XY_OS_WINDOWS )
+#ifdef XY_OS_WINDOWS
 #include <Windows.h>
 #endif // XY_OS_WINDOWS
 
@@ -41,7 +41,7 @@ xyWindow::xyWindow( xySize DesiredSize )
 	if( ++NumWindowsCreated > 1 )
 		xyGetContext().CompatibleUIModes = XY_UI_MODE_DESKTOP;
 
-#if defined( XY_OS_WINDOWS )
+#ifdef XY_OS_WINDOWS
 
 	static const WNDCLASSEXW ClassDesc{ sizeof( WNDCLASSEXW ), CS_VREDRAW | CS_HREDRAW, DefWindowProcW, 0, 0, NULL, NULL, NULL, CreateSolidBrush( RGB( 255, 0, 255 ) ), NULL, L"xyWindow" };
 	static auto              Class    = RegisterClassExW( &ClassDesc );
@@ -59,7 +59,7 @@ xyWindow::xyWindow( xySize DesiredSize )
 xyWindow::~xyWindow()
 {
 
-#if defined( XY_OS_WINDOWS )
+#ifdef XY_OS_WINDOWS
 	DestroyWindow( ( HWND )m_pPlatformHandle );
 #endif // XY_OS_WINDOWS
 
@@ -70,7 +70,7 @@ xyWindow::~xyWindow()
 void xyWindow::PollEvents()
 {
 
-#if defined( XY_OS_WINDOWS )
+#ifdef XY_OS_WINDOWS
 
 	MSG Message;
 	while( PeekMessageW( &Message, ( HWND )m_pPlatformHandle, 0, 0, PM_REMOVE ) )
@@ -88,7 +88,7 @@ void xyWindow::PollEvents()
 bool xyWindow::IsOpen() const
 {
 
-#if defined( XY_OS_WINDOWS )
+#ifdef XY_OS_WINDOWS
 	return IsWindow( ( HWND )m_pPlatformHandle );
 #endif // XY_OS_WINDOWS
 
