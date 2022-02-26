@@ -17,7 +17,14 @@
 
 #pragma once
 
+#include "../xy.h"
+
 #if __has_include( <vulkan/vulkan.h> )
 #define XY_HAS_VULKAN 1
+#pragma comment( lib, "vulkan-1.lib" )
 #endif // __has_include( <vulkan/vulkan.h> )
 
+#if __has_include( <d3d11.h> )
+#define XY_HAS_D3D11 1
+#pragma comment( lib, "d3d11.lib" )
+#endif // __has_include( <d3d11.h> )

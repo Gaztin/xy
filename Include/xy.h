@@ -81,6 +81,12 @@
 
 #endif // __linux__
 
+#if defined( DEBUG )
+#define XY_IF_DEBUG( A, B ) ( A )
+#else // DEBUG
+#define XY_IF_DEBUG( A, B ) ( B )
+#endif // DEBUG
+
 
 //////////////////////////////////////////////////////////////////////////
 /// Enumerators

@@ -41,14 +41,18 @@ public:
 	xyWindow& operator=( xyWindow&& ) = delete;
 
 	// Methods
-	void Show();
-	void PollEvents();
-	bool IsOpen() const;
+	void   Show();
+	void   PollEvents();
+	bool   IsOpen() const;
+	xySize GetSize() const;
+
+	/// Getters
+	void* GetNativeHandle() const { return m_pNativeHandle; }
 
 private:
 
 	/// Member variables
-	void* m_pPlatformHandle = nullptr;
+	void* m_pNativeHandle = nullptr;
 
 }; // xyWindow
 
@@ -78,7 +82,7 @@ private:
 /// Class methods
 
 xyWindow::xyWindow( xyWindow&& rrOther )
-	: m_pPlatformHandle( std::exchange( rrOther.m_pPlatformHandle, nullptr ) )
+	: m_pNativeHandle( std::exchange( rrOther.m_pNativeHandle, nullptr ) )
 {
 
 } // xyWindow
@@ -97,7 +101,7 @@ xyWindow::xyWindow( xySize DesiredSize )
 	static const WNDCLASSEXW ClassDesc{ sizeof( WNDCLASSEXW ), CS_VREDRAW | CS_HREDRAW, DefWindowProcW, 0, 0, NULL, NULL, NULL, CreateSolidBrush( RGB( 255, 0, 255 ) ), NULL, L"xyWindow" };
 	static auto              Class    = RegisterClassExW( &ClassDesc );
 
-	m_pPlatformHandle = CreateWindowExW( WS_EX_OVERLAPPEDWINDOW, L"xyWindow", L"xyWindow", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, ( int )DesiredSize.Width, ( int )DesiredSize.Height, NULL, NULL, NULL, NULL );
+	m_pNativeHandle = CreateWindowExW( WS_EX_OVERLAPPEDWINDOW, L"xyWindow", L"xyWindow", WS_OVERLAPPEDWINDOW, CW_USEDEFAULT, CW_USEDEFAULT, ( int )DesiredSize.Width, ( int )DesiredSize.Height, NULL, NULL, NULL, NULL );
 
 #endif // XY_OS_WINDOWS
 
@@ -109,7 +113,7 @@ xyWindow::~xyWindow()
 {
 
 #if defined( XY_OS_WINDOWS )
-	if( m_pPlatformHandle ) DestroyWindow( ( HWND )m_pPlatformHandle );
+	if( m_pNativeHandle ) DestroyWindow( ( HWND )m_pNativeHandle );
 #endif // XY_OS_WINDOWS
 
 } // ~xyWindow
@@ -120,7 +124,7 @@ void xyWindow::Show()
 {
 
 #if defined( XY_OS_WINDOWS )
-	ShowWindow( ( HWND )m_pPlatformHandle, SW_SHOW );
+	ShowWindow( ( HWND )m_pNativeHandle, SW_SHOW );
 #endif // XY_OS_WINDOWS
 
 } // Show
@@ -133,7 +137,7 @@ void xyWindow::PollEvents()
 #if defined( XY_OS_WINDOWS )
 
 	MSG Message;
-	while( PeekMessageW( &Message, ( HWND )m_pPlatformHandle, 0, 0, PM_REMOVE ) )
+	while( PeekMessageW( &Message, ( HWND )m_pNativeHandle, 0, 0, PM_REMOVE ) )
 	{
 		TranslateMessage( &Message );
 		DispatchMessageW( &Message );
@@ -149,9 +153,25 @@ bool xyWindow::IsOpen() const
 {
 
 #if defined( XY_OS_WINDOWS )
-	return IsWindow( ( HWND )m_pPlatformHandle );
+	return IsWindow( ( HWND )m_pNativeHandle );
 #endif // XY_OS_WINDOWS
 
 } // IsOpen
+
+//////////////////////////////////////////////////////////////////////////
+
+xySize xyWindow::GetSize() const
+{
+
+#if defined( XY_OS_WINDOWS )
+
+	RECT Rect;
+	GetWindowRect( ( HWND )m_pNativeHandle, &Rect );
+
+	return { static_cast< uint16_t >( Rect.right - Rect.left ), static_cast< uint16_t >( Rect.bottom - Rect.top ) };
+
+#endif // XY_OS_WINDOWS
+
+} // GetSize
 
 #endif // XY_IMPLEMENT
