@@ -15,35 +15,11 @@
  * 3. This notice may not be removed or altered from any source distribution.
  */
 
-#include "xy-desktop.h"
-
-#if XY_UI_MODES & XY_UI_MODE_DESKTOP
-
-//////////////////////////////////////////////////////////////////////////
-/// Desktop-specific functions
-
-xyMouse xyGetMouse( void )
-{
-
-#if defined( XY_OS_WINDOWS )
-
-	CURSORINFO Info = { .cbSize=sizeof( CURSORINFO ) };
-	if( GetCursorInfo( &Info ) )
-	{
-		return { .X=Info.ptScreenPos.x, .Y=Info.ptScreenPos.y, .Active=Info.flags==CURSOR_SHOWING };
-	}
-
-	return { .Active=false };
-
-#elif defined( XY_OS_MACOS ) // XY_OS_WINDOWS
-
-	NSPoint MouseLocation = [ NSEvent mouseLocation ];
-
-	return { .X=MouseLocation.x, .Y=MouseLocation.y, .Active=true };
-
-#endif // XY_OS_MACOS
-
-} // xyGetMouse
-
-
-#endif // XY_UI_MODES & XY_UI_MODE_DESKTOP
+#include "xy-platforms/xy-android.h"
+#include "xy-platforms/xy-desktop.h"
+#include "xy-platforms/xy-ios.h"
+#include "xy-platforms/xy-macos.h"
+#include "xy-platforms/xy-tvos.h"
+#include "xy-platforms/xy-watchos.h"
+#include "xy-platforms/xy-windows.h"
+#include "xy.h"
