@@ -157,11 +157,18 @@ struct xyBatteryState
 extern xyContext& xyGetContext( void );
 
 /**
- * Convert a wide-string to UTF8.
+ * Convert a unicode string to UTF-8.
  *
- * @return A UTF8 string.
+ * @return A UTF-8 string.
  */
-extern std::string xyUTFString( std::wstring_view String );
+extern std::string xyUTF( std::wstring_view String );
+
+/**
+ * Convert a UTF-8 to Unicode.
+ *
+ * @return A Unicode string.
+ */
+extern std::wstring xyUnicode( std::string_view String );
 
 /**
  * Prompts a system message box containing a user-defined message and an 'OK' button.
@@ -268,41 +275,57 @@ xyContext& xyGetContext( void )
 
 //////////////////////////////////////////////////////////////////////////
 
-std::string xyUTFString( std::wstring_view String )
+std::string xyUTF( std::wstring_view String )
 {
-	// TODO: xyUTFString on all platforms
+	std::string    UTFString;
+	size_t         Size;
+	const wchar_t* pSrc = String.data();
+	mbstate_t      State{};
 
 #if defined( XY_OS_WINDOWS )
-
-	const int   RequiredSize = WideCharToMultiByte( CP_UTF8, 0, String.data(), static_cast< int >( String.size() ), NULL, 0, NULL, NULL );
-	std::string UTFString( RequiredSize, '\0' );
-
-	if( WideCharToMultiByte( CP_UTF8, 0, String.data(), static_cast< int >( String.size() ), UTFString.data(), static_cast< int >( UTFString.size() ), NULL, NULL ) > 0 )
-		return UTFString;
-
-	return { };
-
-#elif defined( XY_OS_MACOS ) || defined( XY_OS_ANDROID ) || defined( XY_OS_IOS ) // XY_OS_WINDOWS
-
-	std::string UTFString;
-	char        MultiByteBuffer[ MB_CUR_MAX ];
-	mbstate_t   MultiByteState = { };
-
-	// Avoid too many reallocations
-	UTFString.reserve( String.size() * 2 );
-
-	for( wchar_t WideChar : String )
+	if( wcsrtombs_s( &Size, nullptr, 0, &pSrc, String.size(), &State ) == 0 )
 	{
-		const size_t MultiByteCount = wcrtomb( &MultiByteBuffer[ 0 ], WideChar, &MultiByteState );
-		if( MultiByteCount != static_cast< size_t >( -1 ) )
-			UTFString.append( MultiByteBuffer, MultiByteCount );
+		UTFString.resize( Size );
+		wcsrtombs_s( &Size, &UTFString[ 0 ], Size, &pSrc, String.size(), &State );
 	}
+#else // XY_OS_WINDOWS
+	if( ( Size = wcsrtombs( nullptr, &pSrc, String.size(), &State ) ) > 0 )
+	{
+		UTFString.resize( Size );
+		wcsrtombs( &UTFString[ 0 ], &pSrc, String.size(), &State );
+	}
+#endif // !XY_OS_WINDOWS
 
 	return UTFString;
 
-#endif// XY_OS_MACOS || XY_OS_ANDROID || XY_OS_IOS
+} // xyUTF
 
-} // xyUTFString
+//////////////////////////////////////////////////////////////////////////
+
+std::wstring xyUnicode( std::string_view String )
+{
+	std::wstring Result;
+	size_t       Size;
+	const char*  pSrc = String.data();
+	mbstate_t    MultiByteState{ };
+
+#if defined( XY_OS_WINDOWS )
+	if( mbsrtowcs_s( &Size, nullptr, 0, &pSrc, String.size(), &MultiByteState ) == 0 )
+	{
+		Result.resize( Size );
+		mbsrtowcs_s( &Size, &Result[ 0 ], Size, &pSrc, String.size(), &MultiByteState );
+	}
+#else // XY_OS_WINDOWS
+	if( ( Size = mbsrtowcs( nullptr, &pSrc, String.size(), &MultiByteState ) ) > 0 )
+	{
+		Result.resize( Size );
+		mbsrtowcs( &Result[ 0 ], &pSrc, String.size(), &MultiByteState );
+	}
+#endif // !XY_OS_WINDOWS
+
+	return Result;
+
+} // xyUnicode
 
 //////////////////////////////////////////////////////////////////////////
 
@@ -311,7 +334,12 @@ void xyMessageBox( std::string_view Title, std::string_view Message )
 
 #if defined( XY_OS_WINDOWS )
 
-	MessageBoxA( NULL, Message.data(), Title.data(), MB_OK | MB_ICONINFORMATION | MB_TASKMODAL );
+	// The ANSI version of MessageBox doesn't support UTF-8 strings so we convert it into Unicode and use the Unicode version instead
+	const std::wstring UnicodeTitle   = xyUnicode( Title );
+	const std::wstring UnicodeMessage = xyUnicode( Message );
+
+	if( !UnicodeMessage.empty() ) MessageBoxW( NULL, UnicodeMessage.data(), UnicodeTitle.data(), MB_OK | MB_ICONINFORMATION | MB_TASKMODAL );
+	else                          MessageBoxA( NULL, Message       .data(), Title       .data(), MB_OK | MB_ICONINFORMATION | MB_TASKMODAL );
 
 #elif defined( XY_OS_MACOS ) // XY_OS_WINDOWS
 
@@ -519,7 +547,7 @@ xyLanguage xyGetLanguage( void )
 	WCHAR      Buffer[ LOCALE_NAME_MAX_LENGTH ];
 	GetUserDefaultLocaleName( Buffer, static_cast< int >( std::size( Buffer ) ) );
 
-	return { .LocaleName=xyUTFString( Buffer ) };
+	return { .LocaleName=xyUTF( Buffer ) };
 
 #elif defined( XY_OS_MACOS ) // XY_OS_WINDOWS
 

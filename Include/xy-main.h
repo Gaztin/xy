@@ -39,6 +39,7 @@ extern int xyMain( void );
 #if defined( XY_OS_WINDOWS )
 
 #include <windows.h>
+#include <clocale>
 
 int main( int ArgC, char** ppArgV )
 {
@@ -49,6 +50,8 @@ int main( int ArgC, char** ppArgV )
 
 	// Store the handle to the application instance
 	rContext.pPlatformImpl->ApplicationInstanceHandle = GetModuleHandle( NULL );
+
+	std::setlocale( LC_ALL, "en_US.utf8" );
 
 	return xyMain();
 
@@ -63,6 +66,8 @@ INT WINAPI WinMain( _In_ HINSTANCE Instance, _In_opt_ HINSTANCE /*PrevInstance*/
 
 	// Store the handle to the application instance
 	rContext.pPlatformImpl->ApplicationInstanceHandle = Instance;
+
+	std::setlocale( LC_ALL, "en_US.utf8" );
 
 	return xyMain();
 

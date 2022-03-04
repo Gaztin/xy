@@ -15,11 +15,4 @@
  * 3. This notice may not be removed or altered from any source distribution.
  */
 
-#include "xy-platforms/xy-android.h"
-#include "xy-platforms/xy-desktop.h"
-#include "xy-platforms/xy-ios.h"
-#include "xy-platforms/xy-macos.h"
-#include "xy-platforms/xy-tvos.h"
-#include "xy-platforms/xy-watchos.h"
-#include "xy-platforms/xy-windows.h"
 #include "xy.h"
