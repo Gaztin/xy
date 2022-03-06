@@ -745,10 +745,12 @@ std::vector< xyDisplayAdapter > xyGetDisplayAdapters( void )
 	rContext.pPlatformImpl->pNativeActivity->vm->DetachCurrentThread();
 
 #elif defined( XY_OS_IOS ) // XY_OS_ANDROID
+	
+	NSArray< UIScreen* >* pScreens = [ UIScreen screens ];
 
-	for( UIScreen* pScreen in [ UIScreen screens ] )
+	for( UIScreen* pScreen in pScreens )
 	{
-		NSString*        pScreenName = [ pScreen debugDescription ];
+		NSString*        pScreenName = ( pScreen == [ UIScreen mainScreen ] ) ? @"Main Display" : [ NSString stringWithFormat:@"External Display #%d", [ pScreens indexOfObject:pScreen ] ];
 		CGRect           Bounds      = [ pScreen bounds ];
 		xyDisplayAdapter MainDisplay = { .Name     = [ pScreenName UTF8String ],
 		                                 .FullRect = { .Left=CGRectGetMinX( Bounds ), .Top=CGRectGetMinY( Bounds ), .Right=CGRectGetMaxX( Bounds ), .Bottom=CGRectGetMaxY( Bounds ) } };
