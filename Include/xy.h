@@ -636,10 +636,14 @@ xyBatteryState xyGetBatteryState( void )
 
 #elif defined( XY_OS_IOS ) // XY_OS_ANDROID
 	
-	UIDevice* pDevice = [ UIDevice currentDevice ];
-	BatteryState.CapacityPercentage = static_cast< uint8_t >( 100.0 * [ pDevice batteryLevel ] );
-	BatteryState.Charging           = [ pDevice batteryState ] == UIDeviceBatteryStateCharging;
-	BatteryState.Valid              = true;
+	UIDevice*   pDevice = [ UIDevice currentDevice ];
+	const float Level   = [ pDevice batteryLevel ];
+	
+	if( BatteryState.Valid = ( Level >= 0.0f ) )
+	{
+		BatteryState.CapacityPercentage = static_cast< uint8_t >( 100.0f * Level );
+		BatteryState.Charging           = [ pDevice batteryState ] == UIDeviceBatteryStateCharging;
+	}
 
 #endif // XY_OS_IOS
 
