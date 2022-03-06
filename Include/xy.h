@@ -92,6 +92,18 @@ enum class xyTheme
 
 }; // xyTheme
 
+enum class xyMessageButtons
+{
+	Ok,
+	OkCancel,
+	YesNo,
+	YesNoCancel,
+	AbortRetryIgnore,
+	CancelTryagainContinue,
+	RetryCancel,
+
+}; // xyMessageButtons
+
 
 //////////////////////////////////////////////////////////////////////////
 /// Data structures
@@ -169,6 +181,17 @@ extern std::string xyUTF( std::wstring_view String );
  * @return A Unicode string.
  */
 extern std::wstring xyUnicode( std::string_view String );
+
+/**
+ * Prompts a system message box containing a user-defined message and a set of options in the form of buttons.
+ * The current thread is blocked until a selection has been made.
+ *
+ * @param Title The title of the message box window.
+ * @param Message The content of the message text box.
+ * @param Buttons The range of button options to present.
+ * @return The index of the button that was selected. (Example: With 'YesNoRetry' it will return 0 for Yes, 1 for No, and 2 for Retry)
+ */
+extern int xyMessageBox( std::string_view Title, std::string_view Message, xyMessageButtons Buttons );
 
 /**
  * Prompts a system message box containing a user-defined message and an 'OK' button.
@@ -329,17 +352,47 @@ std::wstring xyUnicode( std::string_view String )
 
 //////////////////////////////////////////////////////////////////////////
 
-void xyMessageBox( std::string_view Title, std::string_view Message )
+int xyMessageBox( std::string_view Title, std::string_view Message, xyMessageButtons Buttons )
 {
 
 #if defined( XY_OS_WINDOWS )
+
+	const UINT MessageType = [ Buttons ]
+	{
+		switch( Buttons )
+		{
+			default:
+			case xyMessageButtons::Ok:                     return MB_OK;
+			case xyMessageButtons::OkCancel:               return MB_OKCANCEL;
+			case xyMessageButtons::YesNo:                  return MB_YESNO;
+			case xyMessageButtons::YesNoCancel:            return MB_YESNOCANCEL;
+			case xyMessageButtons::AbortRetryIgnore:       return MB_ABORTRETRYIGNORE;
+			case xyMessageButtons::CancelTryagainContinue: return MB_CANCELTRYCONTINUE;
+			case xyMessageButtons::RetryCancel:            return MB_RETRYCANCEL;
+		}
+	}();
 
 	// The ANSI version of MessageBox doesn't support UTF-8 strings so we convert it into Unicode and use the Unicode version instead
 	const std::wstring UnicodeTitle   = xyUnicode( Title );
 	const std::wstring UnicodeMessage = xyUnicode( Message );
 
-	if( !UnicodeMessage.empty() ) MessageBoxW( NULL, UnicodeMessage.data(), UnicodeTitle.data(), MB_OK | MB_ICONINFORMATION | MB_TASKMODAL );
-	else                          MessageBoxA( NULL, Message       .data(), Title       .data(), MB_OK | MB_ICONINFORMATION | MB_TASKMODAL );
+	int Result;
+	if( !UnicodeMessage.empty() ) Result = MessageBoxW( NULL, UnicodeMessage.data(), UnicodeTitle.data(), MessageType | MB_ICONINFORMATION | MB_TASKMODAL );
+	else                          Result = MessageBoxA( NULL, Message       .data(), Title       .data(), MessageType | MB_ICONINFORMATION | MB_TASKMODAL );
+
+	switch( Result )
+	{
+		default:
+		case IDOK:       return 0;
+		case IDCANCEL:   switch( Buttons ) { default: case xyMessageButtons::CancelTryagainContinue: return 0; case xyMessageButtons::OkCancel: case xyMessageButtons::RetryCancel: return 1; case xyMessageButtons::YesNoCancel: return 2; }
+		case IDABORT:    return 0;
+		case IDRETRY:    switch( Buttons ) { default: case xyMessageButtons::RetryCancel: return 0; case xyMessageButtons::AbortRetryIgnore: return 1; }
+		case IDIGNORE:   return 2;
+		case IDYES:      return 0;
+		case IDNO:       return 1;
+		case IDTRYAGAIN: return 1;
+		case IDCONTINUE: return 2;
+	}
 
 #elif defined( XY_OS_MACOS ) // XY_OS_WINDOWS
 
@@ -359,7 +412,7 @@ void xyMessageBox( std::string_view Title, std::string_view Message )
 
 #elif defined( XY_OS_ANDROID ) // XY_OS_MACOS
 
-	jobject Alert = xyRunOnJavaThread( []( std::string Title, std::string Message )
+	jobject Spinner = xyRunOnJavaThread( []( std::string Title, std::string Message, int Buttons )
 	{
 		xyContext& rContext = xyGetContext();
 		JNIEnv*    pJNI     = rContext.pPlatformImpl->pNativeActivity->env;
@@ -368,44 +421,98 @@ void xyMessageBox( std::string_view Title, std::string_view Message )
 		pJNI->PushLocalFrame( 16 );
 
 		// Obtain all necessary classes and method IDs
-		jclass    ClassBuilder           = pJNI->FindClass( "android/app/AlertDialog$Builder" );
-		jmethodID CtorBuilder            = pJNI->GetMethodID( ClassBuilder, "<init>", "(Landroid/content/Context;)V" );
-		jmethodID MethodSetTitle         = pJNI->GetMethodID( ClassBuilder, "setTitle", "(Ljava/lang/CharSequence;)Landroid/app/AlertDialog$Builder;" );
-		jmethodID MethodSetMessage       = pJNI->GetMethodID( ClassBuilder, "setMessage", "(Ljava/lang/CharSequence;)Landroid/app/AlertDialog$Builder;" );
-		jmethodID MethodSetNeutralButton = pJNI->GetMethodID( ClassBuilder, "setNeutralButton", "(Ljava/lang/CharSequence;Landroid/content/DialogInterface$OnClickListener;)Landroid/app/AlertDialog$Builder;" );
-		jmethodID MethodSetCancelable    = pJNI->GetMethodID( ClassBuilder, "setCancelable", "(Z)Landroid/app/AlertDialog$Builder;" );
-		jmethodID MethodShow             = pJNI->GetMethodID( ClassBuilder, "show","()Landroid/app/AlertDialog;" );
+		jclass    ClassBuilder            = pJNI->FindClass( "android/app/AlertDialog$Builder" );
+		jmethodID CtorBuilder             = pJNI->GetMethodID( ClassBuilder, "<init>", "(Landroid/content/Context;)V" );
+		jmethodID MethodSetTitle          = pJNI->GetMethodID( ClassBuilder, "setTitle", "(Ljava/lang/CharSequence;)Landroid/app/AlertDialog$Builder;" );
+		jmethodID MethodSetMessage        = pJNI->GetMethodID( ClassBuilder, "setMessage", "(Ljava/lang/CharSequence;)Landroid/app/AlertDialog$Builder;" );
+		jmethodID MethodSetPositiveButton = pJNI->GetMethodID( ClassBuilder, "setPositiveButton", "(Ljava/lang/CharSequence;Landroid/content/DialogInterface$OnClickListener;)Landroid/app/AlertDialog$Builder;" );
+		jmethodID MethodSetNegativeButton = pJNI->GetMethodID( ClassBuilder, "setNegativeButton", "(Ljava/lang/CharSequence;Landroid/content/DialogInterface$OnClickListener;)Landroid/app/AlertDialog$Builder;" );
+		jmethodID MethodSetNeutralButton  = pJNI->GetMethodID( ClassBuilder, "setNeutralButton", "(Ljava/lang/CharSequence;Landroid/content/DialogInterface$OnClickListener;)Landroid/app/AlertDialog$Builder;" );
+		jmethodID MethodSetCancelable     = pJNI->GetMethodID( ClassBuilder, "setCancelable", "(Z)Landroid/app/AlertDialog$Builder;" );
+		jmethodID MethodShow              = pJNI->GetMethodID( ClassBuilder, "show", "()Landroid/app/AlertDialog;" );
+
+		// Create a dummy spinner that will keep track of which button was clicked.
+		// This is done because we need a built-in class that implements DialogInterface.OnClickListener and has an easy way to query which button was clicked
+		jclass    ClassSpinner           = pJNI->FindClass( "android/widget/Spinner" );
+		jmethodID CtorSpinner            = pJNI->GetMethodID( ClassSpinner, "<init>", "(Landroid/content/Context;)V" );
+		jmethodID MethodSetSelection     = pJNI->GetMethodID( ClassSpinner, "setSelection", "(I)V" );
+		jobject   Spinner                = pJNI->NewObject( ClassSpinner, CtorSpinner, rContext.pPlatformImpl->pNativeActivity->clazz );
+		Spinner                          = pJNI->NewGlobalRef( Spinner );
+		pJNI->CallVoidMethod( Spinner, MethodSetSelection, 0 );
 
 		// Create the alert dialog
 		jobject Builder = pJNI->NewObject( ClassBuilder, CtorBuilder, rContext.pPlatformImpl->pNativeActivity->clazz );
 		pJNI->CallObjectMethod( Builder, MethodSetTitle, pJNI->NewStringUTF( Title.data() ) );
 		pJNI->CallObjectMethod( Builder, MethodSetMessage, pJNI->NewStringUTF( Message.data() ) );
-		pJNI->CallObjectMethod( Builder, MethodSetNeutralButton, pJNI->NewStringUTF( "OK" ), nullptr );
 		pJNI->CallObjectMethod( Builder, MethodSetCancelable, false );
-		jobject Alert = pJNI->CallObjectMethod( Builder, MethodShow );
-		Alert         = pJNI->NewGlobalRef( Alert );
 
-		// Clean up local references
+		switch( ( xyMessageButtons )Buttons )
+		{
+			case xyMessageButtons::Ok:
+				pJNI->CallObjectMethod( Builder, MethodSetPositiveButton, pJNI->NewStringUTF( "OK" ), Spinner );
+			break;
+
+			case xyMessageButtons::OkCancel:
+				pJNI->CallObjectMethod( Builder, MethodSetPositiveButton, pJNI->NewStringUTF( "OK" ),     Spinner );
+				pJNI->CallObjectMethod( Builder, MethodSetNegativeButton, pJNI->NewStringUTF( "Cancel" ), Spinner );
+			break;
+
+			case xyMessageButtons::YesNo:
+				pJNI->CallObjectMethod( Builder, MethodSetPositiveButton, pJNI->NewStringUTF( "Yes" ), Spinner );
+				pJNI->CallObjectMethod( Builder, MethodSetNegativeButton, pJNI->NewStringUTF( "No" ),  Spinner );
+			break;
+
+			case xyMessageButtons::YesNoCancel:
+				pJNI->CallObjectMethod( Builder, MethodSetPositiveButton, pJNI->NewStringUTF( "Yes" ),    Spinner );
+				pJNI->CallObjectMethod( Builder, MethodSetNegativeButton, pJNI->NewStringUTF( "No" ),     Spinner );
+				pJNI->CallObjectMethod( Builder, MethodSetNeutralButton,  pJNI->NewStringUTF( "Cancel" ), Spinner );
+			break;
+
+			case xyMessageButtons::AbortRetryIgnore:
+				pJNI->CallObjectMethod( Builder, MethodSetPositiveButton, pJNI->NewStringUTF( "Abort" ),  Spinner );
+				pJNI->CallObjectMethod( Builder, MethodSetNegativeButton, pJNI->NewStringUTF( "Retry" ),  Spinner );
+				pJNI->CallObjectMethod( Builder, MethodSetNeutralButton,  pJNI->NewStringUTF( "Ignore" ), Spinner );
+			break;
+
+			case xyMessageButtons::CancelTryagainContinue:
+				pJNI->CallObjectMethod( Builder, MethodSetPositiveButton, pJNI->NewStringUTF( "Cancel" ),    Spinner );
+				pJNI->CallObjectMethod( Builder, MethodSetNegativeButton, pJNI->NewStringUTF( "Try Again" ), Spinner );
+				pJNI->CallObjectMethod( Builder, MethodSetNeutralButton,  pJNI->NewStringUTF( "Continue" ),  Spinner );
+			break;
+
+			case xyMessageButtons::RetryCancel:
+				pJNI->CallObjectMethod( Builder, MethodSetPositiveButton, pJNI->NewStringUTF( "Retry" ),  Spinner );
+				pJNI->CallObjectMethod( Builder, MethodSetNegativeButton, pJNI->NewStringUTF( "Cancel" ), Spinner );
+			break;
+		}
+
+		// Show the alert
+		pJNI->CallObjectMethod( Builder, MethodShow );
+
 		pJNI->PopLocalFrame( nullptr );
 
-		return Alert;
+		return Spinner;
 
-	}, std::string( Title ), std::string( Message ) );
+	}, std::string( Title ), std::string( Message ), ( int )Buttons );
 
 	xyContext& rContext = xyGetContext();
+	JavaVM*    pJVM     = rContext.pPlatformImpl->pNativeActivity->vm;
 	JNIEnv*    pJNI;
-	rContext.pPlatformImpl->pNativeActivity->vm->AttachCurrentThread( &pJNI, nullptr );
+	pJVM->AttachCurrentThread( &pJNI, nullptr );
 
-	jclass    ClassAlertDialog = pJNI->GetObjectClass( Alert );
-	jmethodID MethodIsShowing  = pJNI->GetMethodID( ClassAlertDialog, "isShowing", "()Z" );
-
-	// Sleep until dialog is closed
-	while( pJNI->CallBooleanMethod( Alert, MethodIsShowing ) )
+	// Sleep until the alert is closed
+	jclass    ClassSpinner                  = pJNI->GetObjectClass( Spinner );
+	jmethodID MethodGetSelectedItemPosition = pJNI->GetMethodID( ClassSpinner, "getSelectedItemPosition", "()I" );
+	int       Result;
+	while( ( Result = pJNI->CallIntMethod( Spinner, MethodGetSelectedItemPosition ) ) == 0 )
 		std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
 
-	pJNI->DeleteGlobalRef( Alert );
+	pJNI->DeleteGlobalRef( Spinner );
 
-	rContext.pPlatformImpl->pNativeActivity->vm->DetachCurrentThread();
+	pJVM->DetachCurrentThread();
+
+	// Convert from [-1, -2, -3] to [0, 1, 2]
+	return -( Result + 1 );
 
 #elif defined( XY_OS_IOS ) // XY_OS_ANDROID
 
@@ -430,6 +537,14 @@ void xyMessageBox( std::string_view Title, std::string_view Message )
 		std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
 
 #endif // XY_OS_IOS
+
+} // xyMessageBox
+
+//////////////////////////////////////////////////////////////////////////
+
+void xyMessageBox( std::string_view Title, std::string_view Message )
+{
+	( void )xyMessageBox( Title, Message, xyMessageButtons::Ok );
 
 } // xyMessageBox
 
