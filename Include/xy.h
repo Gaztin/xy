@@ -425,9 +425,9 @@ int xyMessageBox( std::string_view Title, std::string_view Message, xyMessageBut
 		jmethodID CtorBuilder             = pJNI->GetMethodID( ClassBuilder, "<init>", "(Landroid/content/Context;)V" );
 		jmethodID MethodSetTitle          = pJNI->GetMethodID( ClassBuilder, "setTitle", "(Ljava/lang/CharSequence;)Landroid/app/AlertDialog$Builder;" );
 		jmethodID MethodSetMessage        = pJNI->GetMethodID( ClassBuilder, "setMessage", "(Ljava/lang/CharSequence;)Landroid/app/AlertDialog$Builder;" );
-		jmethodID MethodSetPositiveButton = pJNI->GetMethodID( ClassBuilder, "setPositiveButton", "(Ljava/lang/CharSequence;Landroid/content/DialogInterface$OnClickListener;)Landroid/app/AlertDialog$Builder;" );
-		jmethodID MethodSetNegativeButton = pJNI->GetMethodID( ClassBuilder, "setNegativeButton", "(Ljava/lang/CharSequence;Landroid/content/DialogInterface$OnClickListener;)Landroid/app/AlertDialog$Builder;" );
 		jmethodID MethodSetNeutralButton  = pJNI->GetMethodID( ClassBuilder, "setNeutralButton", "(Ljava/lang/CharSequence;Landroid/content/DialogInterface$OnClickListener;)Landroid/app/AlertDialog$Builder;" );
+		jmethodID MethodSetNegativeButton = pJNI->GetMethodID( ClassBuilder, "setNegativeButton", "(Ljava/lang/CharSequence;Landroid/content/DialogInterface$OnClickListener;)Landroid/app/AlertDialog$Builder;" );
+		jmethodID MethodSetPositiveButton = pJNI->GetMethodID( ClassBuilder, "setPositiveButton", "(Ljava/lang/CharSequence;Landroid/content/DialogInterface$OnClickListener;)Landroid/app/AlertDialog$Builder;" );
 		jmethodID MethodSetCancelable     = pJNI->GetMethodID( ClassBuilder, "setCancelable", "(Z)Landroid/app/AlertDialog$Builder;" );
 		jmethodID MethodShow              = pJNI->GetMethodID( ClassBuilder, "show", "()Landroid/app/AlertDialog;" );
 
@@ -453,36 +453,36 @@ int xyMessageBox( std::string_view Title, std::string_view Message, xyMessageBut
 			break;
 
 			case xyMessageButtons::OkCancel:
-				pJNI->CallObjectMethod( Builder, MethodSetPositiveButton, pJNI->NewStringUTF( "OK" ),     Spinner );
-				pJNI->CallObjectMethod( Builder, MethodSetNegativeButton, pJNI->NewStringUTF( "Cancel" ), Spinner );
+				pJNI->CallObjectMethod( Builder, MethodSetNeutralButton,  pJNI->NewStringUTF( "OK" ),     Spinner );
+				pJNI->CallObjectMethod( Builder, MethodSetPositiveButton, pJNI->NewStringUTF( "Cancel" ), Spinner );
 			break;
 
 			case xyMessageButtons::YesNo:
-				pJNI->CallObjectMethod( Builder, MethodSetPositiveButton, pJNI->NewStringUTF( "Yes" ), Spinner );
-				pJNI->CallObjectMethod( Builder, MethodSetNegativeButton, pJNI->NewStringUTF( "No" ),  Spinner );
+				pJNI->CallObjectMethod( Builder, MethodSetNeutralButton,  pJNI->NewStringUTF( "Yes" ),  Spinner );
+				pJNI->CallObjectMethod( Builder, MethodSetPositiveButton, pJNI->NewStringUTF( "No" ),   Spinner );
 			break;
 
 			case xyMessageButtons::YesNoCancel:
-				pJNI->CallObjectMethod( Builder, MethodSetPositiveButton, pJNI->NewStringUTF( "Yes" ),    Spinner );
+				pJNI->CallObjectMethod( Builder, MethodSetNeutralButton,  pJNI->NewStringUTF( "Yes" ),    Spinner );
 				pJNI->CallObjectMethod( Builder, MethodSetNegativeButton, pJNI->NewStringUTF( "No" ),     Spinner );
-				pJNI->CallObjectMethod( Builder, MethodSetNeutralButton,  pJNI->NewStringUTF( "Cancel" ), Spinner );
+				pJNI->CallObjectMethod( Builder, MethodSetPositiveButton, pJNI->NewStringUTF( "Cancel" ), Spinner );
 			break;
 
 			case xyMessageButtons::AbortRetryIgnore:
-				pJNI->CallObjectMethod( Builder, MethodSetPositiveButton, pJNI->NewStringUTF( "Abort" ),  Spinner );
+				pJNI->CallObjectMethod( Builder, MethodSetNeutralButton,  pJNI->NewStringUTF( "Abort" ),  Spinner );
 				pJNI->CallObjectMethod( Builder, MethodSetNegativeButton, pJNI->NewStringUTF( "Retry" ),  Spinner );
-				pJNI->CallObjectMethod( Builder, MethodSetNeutralButton,  pJNI->NewStringUTF( "Ignore" ), Spinner );
+				pJNI->CallObjectMethod( Builder, MethodSetPositiveButton, pJNI->NewStringUTF( "Ignore" ), Spinner );
 			break;
 
 			case xyMessageButtons::CancelTryagainContinue:
-				pJNI->CallObjectMethod( Builder, MethodSetPositiveButton, pJNI->NewStringUTF( "Cancel" ),    Spinner );
+				pJNI->CallObjectMethod( Builder, MethodSetNeutralButton,  pJNI->NewStringUTF( "Cancel" ),    Spinner );
 				pJNI->CallObjectMethod( Builder, MethodSetNegativeButton, pJNI->NewStringUTF( "Try Again" ), Spinner );
-				pJNI->CallObjectMethod( Builder, MethodSetNeutralButton,  pJNI->NewStringUTF( "Continue" ),  Spinner );
+				pJNI->CallObjectMethod( Builder, MethodSetPositiveButton, pJNI->NewStringUTF( "Continue" ),  Spinner );
 			break;
 
 			case xyMessageButtons::RetryCancel:
-				pJNI->CallObjectMethod( Builder, MethodSetPositiveButton, pJNI->NewStringUTF( "Retry" ),  Spinner );
-				pJNI->CallObjectMethod( Builder, MethodSetNegativeButton, pJNI->NewStringUTF( "Cancel" ), Spinner );
+				pJNI->CallObjectMethod( Builder, MethodSetNeutralButton,  pJNI->NewStringUTF( "Retry" ),  Spinner );
+				pJNI->CallObjectMethod( Builder, MethodSetPositiveButton, pJNI->NewStringUTF( "Cancel" ), Spinner );
 			break;
 		}
 
@@ -511,8 +511,13 @@ int xyMessageBox( std::string_view Title, std::string_view Message, xyMessageBut
 
 	pJVM->DetachCurrentThread();
 
-	// Convert from [-1, -2, -3] to [0, 1, 2]
-	return -( Result + 1 );
+	switch( Result )
+	{
+		default:
+		case -3: return 0;
+		case -2: return 1;
+		case -1: switch( Buttons ) { default: return 2; case xyMessageButtons::Ok: return 0; case xyMessageButtons::OkCancel: case xyMessageButtons::YesNo: case xyMessageButtons::RetryCancel: return 1; }
+	}
 
 #elif defined( XY_OS_IOS ) // XY_OS_ANDROID
 
