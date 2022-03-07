@@ -418,54 +418,49 @@ xyMessageResult xyMessageBox( std::string_view Title, std::string_view Message, 
 	[ pAlert setInformativeText:pInformativeText ];
 	[ pAlert setAlertStyle:NSAlertStyleInformational ];
 
+	// Note: Trailing space in "Cancel " is intended
+	// NSAlert has special layouts for common titles (such as "Cancel") that we would like to avoid
 	switch( Buttons )
 	{
 		case xyMessageButtons::Ok:
-			[ pAlert addButtonWithTitle:@"OK" ];
+			[ pAlert addButtonWithTitle:@"OK" ].tag = ( NSInteger )xyMessageResult::Ok;
 		break;
 
 		case xyMessageButtons::OkCancel:
-			[ pAlert addButtonWithTitle:@"OK" ];
-			[ pAlert addButtonWithTitle:@"Cancel" ];
+			[ pAlert addButtonWithTitle:@"OK"     ].tag = ( NSInteger )xyMessageResult::Ok;
+			[ pAlert addButtonWithTitle:@"Cancel" ].tag = ( NSInteger )xyMessageResult::Cancel;
 		break;
 
 		case xyMessageButtons::YesNo:
-			[ pAlert addButtonWithTitle:@"Yes" ];
-			[ pAlert addButtonWithTitle:@"No" ];
+			[ pAlert addButtonWithTitle:@"Yes" ].tag = ( NSInteger )xyMessageResult::Yes;
+			[ pAlert addButtonWithTitle:@"No"  ].tag = ( NSInteger )xyMessageResult::No;
 		break;
 
 		case xyMessageButtons::YesNoCancel:
-			[ pAlert addButtonWithTitle:@"Yes" ];
-			[ pAlert addButtonWithTitle:@"No" ];
-			[ pAlert addButtonWithTitle:@"Cancel" ];
+			[ pAlert addButtonWithTitle:@"Yes"     ].tag = ( NSInteger )xyMessageResult::Yes;
+			[ pAlert addButtonWithTitle:@"No"      ].tag = ( NSInteger )xyMessageResult::No;
+			[ pAlert addButtonWithTitle:@"Cancel " ].tag = ( NSInteger )xyMessageResult::Cancel;
 		break;
 
 		case xyMessageButtons::AbortRetryIgnore:
-			[ pAlert addButtonWithTitle:@"Abort" ];
-			[ pAlert addButtonWithTitle:@"Retry" ];
-			[ pAlert addButtonWithTitle:@"Ignore" ];
+			[ pAlert addButtonWithTitle:@"Abort"  ].tag = ( NSInteger )xyMessageResult::Abort;
+			[ pAlert addButtonWithTitle:@"Retry"  ].tag = ( NSInteger )xyMessageResult::Retry;
+			[ pAlert addButtonWithTitle:@"Ignore" ].tag = ( NSInteger )xyMessageResult::Ignore;
 		break;
 
 		case xyMessageButtons::CancelTryagainContinue:
-			[ pAlert addButtonWithTitle:@"Cancel" ];
-			[ pAlert addButtonWithTitle:@"Try Again" ];
-			[ pAlert addButtonWithTitle:@"Continue" ];
+			[ pAlert addButtonWithTitle:@"Cancel "   ].tag = ( NSInteger )xyMessageResult::Cancel;
+			[ pAlert addButtonWithTitle:@"Try Again" ].tag = ( NSInteger )xyMessageResult::Tryagain;
+			[ pAlert addButtonWithTitle:@"Continue"  ].tag = ( NSInteger )xyMessageResult::Continue;
 		break;
 
 		case xyMessageButtons::RetryCancel:
-			[ pAlert addButtonWithTitle:@"Retry" ];
-			[ pAlert addButtonWithTitle:@"Cancel" ];
+			[ pAlert addButtonWithTitle:@"Retry"   ].tag = ( NSInteger )xyMessageResult::Retry;
+			[ pAlert addButtonWithTitle:@"Cancel " ].tag = ( NSInteger )xyMessageResult::Cancel;
 		break;
 	}
 
-	xyMessageResult Result;
-	switch( [ pAlert runModal ] )
-	{
-		default:
-		case NSAlertFirstButtonReturn:  switch( Buttons ) { default: case xyMessageButtons::Ok: case xyMessageButtons::OkCancel: Result = xyMessageResult::Ok; case xyMessageButtons::YesNo: case xyMessageButtons::YesNoCancel: Result = xyMessageResult::Yes; case xyMessageButtons::AbortRetryIgnore: Result = xyMessageResult::Abort; case xyMessageButtons::CancelTryagainContinue: Result = xyMessageResult::Cancel; case xyMessageButtons::RetryCancel: Result = xyMessageResult::Retry; } break;
-		case NSAlertSecondButtonReturn: switch( Buttons ) { default: case xyMessageButtons::OkCancel: case xyMessageButtons::RetryCancel: Result = xyMessageResult::Cancel; case xyMessageButtons::YesNo: case xyMessageButtons::YesNoCancel: Result = xyMessageResult::No; case xyMessageButtons::AbortRetryIgnore: Result = xyMessageResult::Retry; case xyMessageButtons::CancelTryagainContinue: Result = xyMessageResult::Tryagain; } break;
-		case NSAlertThirdButtonReturn:  switch( Buttons ) { default: case xyMessageButtons::YesNoCancel: Result = xyMessageResult::Cancel; case xyMessageButtons::AbortRetryIgnore: Result = xyMessageResult::Ignore; case xyMessageButtons::CancelTryagainContinue: Result = xyMessageResult::Continue; } break;
-	}
+	xyMessageResult Result = ( xyMessageResult )[ pAlert runModal ];
 
 	[ pInformativeText release ];
 	[ pMessageText release ];
