@@ -587,7 +587,7 @@ xyMessageResult xyMessageBox( std::string_view Title, std::string_view Message, 
 
 #elif defined( XY_OS_IOS ) // XY_OS_ANDROID
 
-	__block int Selection = -1;
+	__block int Result = -1;
 
 	dispatch_async_and_wait( dispatch_get_main_queue(), ^
 	{
@@ -601,40 +601,40 @@ xyMessageResult xyMessageBox( std::string_view Title, std::string_view Message, 
 		switch( Buttons )
 		{
 			case xyMessageButtons::Ok:
-				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Selection = ( int )xyMessageResult::Ok; } ] ];
+				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Result = ( int )xyMessageResult::Ok; } ] ];
 			break;
 
 			case xyMessageButtons::OkCancel:
-				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"OK"     style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Selection = ( int )xyMessageResult::Ok;     } ] ];
-				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Selection = ( int )xyMessageResult::Cancel; } ] ];
+				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"OK"     style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Result = ( int )xyMessageResult::Ok;     } ] ];
+				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Result = ( int )xyMessageResult::Cancel; } ] ];
 			break;
 
 			case xyMessageButtons::YesNo:
-				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Yes" style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Selection = ( int )xyMessageResult::Yes; } ] ];
-				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"No"  style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Selection = ( int )xyMessageResult::No;  } ] ];
+				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Yes" style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Result = ( int )xyMessageResult::Yes; } ] ];
+				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"No"  style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Result = ( int )xyMessageResult::No;  } ] ];
 			break;
 
 			case xyMessageButtons::YesNoCancel:
-				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Yes"    style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Selection = ( int )xyMessageResult::Yes;    } ] ];
-				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"No"     style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Selection = ( int )xyMessageResult::No;     } ] ];
-				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Selection = ( int )xyMessageResult::Cancel; } ] ];
+				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Yes"    style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Result = ( int )xyMessageResult::Yes;    } ] ];
+				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"No"     style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Result = ( int )xyMessageResult::No;     } ] ];
+				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Result = ( int )xyMessageResult::Cancel; } ] ];
 			break;
 
 			case xyMessageButtons::AbortRetryIgnore:
-				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Abort"  style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Selection = ( int )xyMessageResult::Abort;  } ] ];
-				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Retry"  style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Selection = ( int )xyMessageResult::Retry;  } ] ];
-				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Ignore" style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Selection = ( int )xyMessageResult::Ignore; } ] ];
+				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Abort"  style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Result = ( int )xyMessageResult::Abort;  } ] ];
+				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Retry"  style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Result = ( int )xyMessageResult::Retry;  } ] ];
+				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Ignore" style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Result = ( int )xyMessageResult::Ignore; } ] ];
 			break;
 
 			case xyMessageButtons::CancelTryagainContinue:
-				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Cancel"    style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Selection = ( int )xyMessageResult::Cancel;   } ] ];
-				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Try Again" style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Selection = ( int )xyMessageResult::Tryagain; } ] ];
-				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Continue"  style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Selection = ( int )xyMessageResult::Continue; } ] ];
+				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Cancel"    style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Result = ( int )xyMessageResult::Cancel;   } ] ];
+				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Try Again" style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Result = ( int )xyMessageResult::Tryagain; } ] ];
+				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Continue"  style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Result = ( int )xyMessageResult::Continue; } ] ];
 			break;
 
 			case xyMessageButtons::RetryCancel:
-				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Retry"  style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Selection = ( int )xyMessageResult::Retry;  } ] ];
-				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Selection = ( int )xyMessageResult::Cancel; } ] ];
+				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Retry"  style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Result = ( int )xyMessageResult::Retry;  } ] ];
+				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Result = ( int )xyMessageResult::Cancel; } ] ];
 			break;
 		}
 
@@ -642,8 +642,10 @@ xyMessageResult xyMessageBox( std::string_view Title, std::string_view Message, 
 	} );
 
 	// Sleep until selection has been made
-	while( Selection < 0 )
+	while( Result < 0 )
 		std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
+	
+	return ( xyMessageResult )Result;
 
 #endif // XY_OS_IOS
 
