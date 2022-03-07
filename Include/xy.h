@@ -104,6 +104,20 @@ enum class xyMessageButtons
 
 }; // xyMessageButtons
 
+enum class xyMessageResult
+{
+	Ok,
+	Cancel,
+	Yes,
+	No,
+	Abort,
+	Retry,
+	Ignore,
+	Tryagain,
+	Continue,
+
+}; // xyMessageResult
+
 
 //////////////////////////////////////////////////////////////////////////
 /// Data structures
@@ -189,9 +203,9 @@ extern std::wstring xyUnicode( std::string_view String );
  * @param Title The title of the message box window.
  * @param Message The content of the message text box.
  * @param Buttons The range of button options to present.
- * @return The index of the button that was selected. (Example: With 'YesNoRetry' it will return 0 for Yes, 1 for No, and 2 for Retry)
+ * @return The result that was selected.
  */
-extern int xyMessageBox( std::string_view Title, std::string_view Message, xyMessageButtons Buttons );
+extern xyMessageResult xyMessageBox( std::string_view Title, std::string_view Message, xyMessageButtons Buttons );
 
 /**
  * Prompts a system message box containing a user-defined message and an 'OK' button.
@@ -352,7 +366,7 @@ std::wstring xyUnicode( std::string_view String )
 
 //////////////////////////////////////////////////////////////////////////
 
-int xyMessageBox( std::string_view Title, std::string_view Message, xyMessageButtons Buttons )
+xyMessageResult xyMessageBox( std::string_view Title, std::string_view Message, xyMessageButtons Buttons )
 {
 
 #if defined( XY_OS_WINDOWS )
@@ -383,15 +397,15 @@ int xyMessageBox( std::string_view Title, std::string_view Message, xyMessageBut
 	switch( Result )
 	{
 		default:
-		case IDOK:       return 0;
-		case IDCANCEL:   switch( Buttons ) { default: case xyMessageButtons::CancelTryagainContinue: return 0; case xyMessageButtons::OkCancel: case xyMessageButtons::RetryCancel: return 1; case xyMessageButtons::YesNoCancel: return 2; }
-		case IDABORT:    return 0;
-		case IDRETRY:    switch( Buttons ) { default: case xyMessageButtons::RetryCancel: return 0; case xyMessageButtons::AbortRetryIgnore: return 1; }
-		case IDIGNORE:   return 2;
-		case IDYES:      return 0;
-		case IDNO:       return 1;
-		case IDTRYAGAIN: return 1;
-		case IDCONTINUE: return 2;
+		case IDOK:       return xyMessageResult::Ok;
+		case IDCANCEL:   return xyMessageResult::Cancel;
+		case IDABORT:    return xyMessageResult::Abort;
+		case IDRETRY:    return xyMessageResult::Retry;
+		case IDIGNORE:   return xyMessageResult::Ignore;
+		case IDYES:      return xyMessageResult::Yes;
+		case IDNO:       return xyMessageResult::No;
+		case IDTRYAGAIN: return xyMessageResult::Tryagain;
+		case IDCONTINUE: return xyMessageResult::Continue;
 	}
 
 #elif defined( XY_OS_MACOS ) // XY_OS_WINDOWS
@@ -400,15 +414,64 @@ int xyMessageBox( std::string_view Title, std::string_view Message, xyMessageBut
 	NSString* pMessageText     = [ NSString stringWithUTF8String:Title.data() ];
 	NSString* pInformativeText = [ NSString stringWithUTF8String:Message.data() ];
 
-	[ pAlert addButtonWithTitle:@"OK" ];
 	[ pAlert setMessageText:pMessageText ];
 	[ pAlert setInformativeText:pInformativeText ];
 	[ pAlert setAlertStyle:NSAlertStyleInformational ];
-	[ pAlert runModal ];
+
+	switch( Buttons )
+	{
+		case xyMessageButtons::Ok:
+			[ pAlert addButtonWithTitle:@"OK" ];
+		break;
+
+		case xyMessageButtons::OkCancel:
+			[ pAlert addButtonWithTitle:@"OK" ];
+			[ pAlert addButtonWithTitle:@"Cancel" ];
+		break;
+
+		case xyMessageButtons::YesNo:
+			[ pAlert addButtonWithTitle:@"Yes" ];
+			[ pAlert addButtonWithTitle:@"No" ];
+		break;
+
+		case xyMessageButtons::YesNoCancel:
+			[ pAlert addButtonWithTitle:@"Yes" ];
+			[ pAlert addButtonWithTitle:@"No" ];
+			[ pAlert addButtonWithTitle:@"Cancel" ];
+		break;
+
+		case xyMessageButtons::AbortRetryIgnore:
+			[ pAlert addButtonWithTitle:@"Abort" ];
+			[ pAlert addButtonWithTitle:@"Retry" ];
+			[ pAlert addButtonWithTitle:@"Ignore" ];
+		break;
+
+		case xyMessageButtons::CancelTryagainContinue:
+			[ pAlert addButtonWithTitle:@"Cancel" ];
+			[ pAlert addButtonWithTitle:@"Try Again" ];
+			[ pAlert addButtonWithTitle:@"Continue" ];
+		break;
+
+		case xyMessageButtons::RetryCancel:
+			[ pAlert addButtonWithTitle:@"Retry" ];
+			[ pAlert addButtonWithTitle:@"Cancel" ];
+		break;
+	}
+
+	xyMessageResult Result;
+	switch( [ pAlert runModal ] )
+	{
+		default:
+		case NSAlertFirstButtonReturn:  switch( Buttons ) { default: case xyMessageButtons::Ok: case xyMessageButtons::OkCancel: Result = xyMessageResult::Ok; case xyMessageButtons::YesNo: case xyMessageButtons::YesNoCancel: Result = xyMessageResult::Yes; case xyMessageButtons::AbortRetryIgnore: Result = xyMessageResult::Abort; case xyMessageButtons::CancelTryagainContinue: Result = xyMessageResult::Cancel; case xyMessageButtons::RetryCancel: Result = xyMessageResult::Retry; } break;
+		case NSAlertSecondButtonReturn: switch( Buttons ) { default: case xyMessageButtons::OkCancel: case xyMessageButtons::RetryCancel: Result = xyMessageResult::Cancel; case xyMessageButtons::YesNo: case xyMessageButtons::YesNoCancel: Result = xyMessageResult::No; case xyMessageButtons::AbortRetryIgnore: Result = xyMessageResult::Retry; case xyMessageButtons::CancelTryagainContinue: Result = xyMessageResult::Tryagain; } break;
+		case NSAlertThirdButtonReturn:  switch( Buttons ) { default: case xyMessageButtons::YesNoCancel: Result = xyMessageResult::Cancel; case xyMessageButtons::AbortRetryIgnore: Result = xyMessageResult::Ignore; case xyMessageButtons::CancelTryagainContinue: Result = xyMessageResult::Continue; } break;
+	}
 
 	[ pInformativeText release ];
 	[ pMessageText release ];
 	[ pAlert release ];
+
+	return Result;
 
 #elif defined( XY_OS_ANDROID ) // XY_OS_MACOS
 
@@ -511,17 +574,25 @@ int xyMessageBox( std::string_view Title, std::string_view Message, xyMessageBut
 
 	pJVM->DetachCurrentThread();
 
-	switch( Result )
+	std::array< xyMessageResult, 3 > ResultTable;
+	switch( Buttons )
 	{
 		default:
-		case -3: return 0;
-		case -2: return 1;
-		case -1: switch( Buttons ) { default: return 2; case xyMessageButtons::Ok: return 0; case xyMessageButtons::OkCancel: case xyMessageButtons::YesNo: case xyMessageButtons::RetryCancel: return 1; }
+		case xyMessageButtons::Ok:                     ResultTable = { xyMessageResult::Ok,       { },                       { }                     }; break;
+		case xyMessageButtons::OkCancel:               ResultTable = { xyMessageResult::Cancel,   { },                       xyMessageResult::Ok     }; break;
+		case xyMessageButtons::YesNo:                  ResultTable = { xyMessageResult::No,       { },                       xyMessageResult::Yes    }; break;
+		case xyMessageButtons::YesNoCancel:            ResultTable = { xyMessageResult::Cancel,   xyMessageResult::No,       xyMessageResult::Yes    }; break;
+		case xyMessageButtons::AbortRetryIgnore:       ResultTable = { xyMessageResult::Ignore,   xyMessageResult::Retry,    xyMessageResult::Abort  }; break;
+		case xyMessageButtons::CancelTryagainContinue: ResultTable = { xyMessageResult::Continue, xyMessageResult::Tryagain, xyMessageResult::Cancel }; break;
+		case xyMessageButtons::RetryCancel:            ResultTable = { xyMessageResult::Cancel,   { },                       xyMessageResult::Retry  }; break;
 	}
+
+	// Results ranges from -1 to -3
+	return ResultTable[ -( Result + 1 ) ];
 
 #elif defined( XY_OS_IOS ) // XY_OS_ANDROID
 
-	__block bool Presented = true;
+	__block int Selection = -1;
 
 	dispatch_async_and_wait( dispatch_get_main_queue(), ^
 	{
@@ -531,14 +602,52 @@ int xyMessageBox( std::string_view Title, std::string_view Message, xyMessageBut
 		NSString*          pTitle           = [ NSString stringWithUTF8String:Title.data() ];
 		NSString*          pMessage         = [ NSString stringWithUTF8String:Message.data() ];
 		UIAlertController* pAlertController = [ UIAlertController alertControllerWithTitle:pTitle message:pMessage preferredStyle:UIAlertControllerStyleAlert ];
-		UIAlertAction*     pActionOK        = [ UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Presented = false; } ];
 
-		[ pAlertController addAction:pActionOK ];
+		switch( Buttons )
+		{
+			case xyMessageButtons::Ok:
+				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Selection = ( int )xyMessageResult::Ok; } ] ];
+			break;
+
+			case xyMessageButtons::OkCancel:
+				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"OK"     style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Selection = ( int )xyMessageResult::Ok;     } ] ];
+				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Selection = ( int )xyMessageResult::Cancel; } ] ];
+			break;
+
+			case xyMessageButtons::YesNo:
+				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Yes" style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Selection = ( int )xyMessageResult::Yes; } ] ];
+				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"No"  style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Selection = ( int )xyMessageResult::No;  } ] ];
+			break;
+
+			case xyMessageButtons::YesNoCancel:
+				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Yes"    style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Selection = ( int )xyMessageResult::Yes;    } ] ];
+				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"No"     style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Selection = ( int )xyMessageResult::No;     } ] ];
+				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Selection = ( int )xyMessageResult::Cancel; } ] ];
+			break;
+
+			case xyMessageButtons::AbortRetryIgnore:
+				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Abort"  style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Selection = ( int )xyMessageResult::Abort;  } ] ];
+				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Retry"  style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Selection = ( int )xyMessageResult::Retry;  } ] ];
+				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Ignore" style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Selection = ( int )xyMessageResult::Ignore; } ] ];
+			break;
+
+			case xyMessageButtons::CancelTryagainContinue:
+				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Cancel"    style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Selection = ( int )xyMessageResult::Cancel;   } ] ];
+				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Try Again" style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Selection = ( int )xyMessageResult::Tryagain; } ] ];
+				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Continue"  style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Selection = ( int )xyMessageResult::Continue; } ] ];
+			break;
+
+			case xyMessageButtons::RetryCancel:
+				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Retry"  style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Selection = ( int )xyMessageResult::Retry;  } ] ];
+				[ pAlertController addAction:[ UIAlertAction actionWithTitle:@"Cancel" style:UIAlertActionStyleDefault handler:^( UIAlertAction* pAction ) { Selection = ( int )xyMessageResult::Cancel; } ] ];
+			break;
+		}
+
 		[ pViewController presentViewController:pAlertController animated:NO completion:^{ } ];
 	} );
 
-	// Sleep until dialog is closed
-	while( Presented )
+	// Sleep until selection has been made
+	while( Selection < 0 )
 		std::this_thread::sleep_for( std::chrono::milliseconds( 1 ) );
 
 #endif // XY_OS_IOS
